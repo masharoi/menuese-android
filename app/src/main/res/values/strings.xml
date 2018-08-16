@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">MenuMe</string>
+    <string name="home">Home</string>
+    <string name="menu">Menu</string>
+    <string name="order">Order</string>
+    <string name="restaurant_photo">Restaurant photo</string>
+    <string name="settings_min_magnitude_key" translatable="false">min_magnitude</string>
+    <string name="settings_min_magnitude_default" translatable="false">6</string>
+</resources>
