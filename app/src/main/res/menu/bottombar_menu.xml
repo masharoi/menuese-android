@@ -15,9 +15,9 @@
         app:showAsAction="ifRoom"/>
 
     <item
-        android:id="@+id/bottombaritem_menu"
-        android:icon="@drawable/ic_round_restaurant_menu"
-        android:title="@string/menu"
+        android:id="@+id/bottombaritem_profile"
+        android:icon="@drawable/ic_round_profile"
+        android:title="Profile"
         app:showAsAction="ifRoom"/>
 
 </menu>

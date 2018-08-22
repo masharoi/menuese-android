@@ -7,7 +7,7 @@ public class Restaurant {
 
     private String name;
     private String address;
-   // private String type;
+    private String imageUrl;
     private int restId;
 
     /**
@@ -15,13 +15,31 @@ public class Restaurant {
      * @param name name of the restaurant
      * @param address the address of the restaurant
      * @param restId the id of the restaurant
+     * @param imageUrl url of the image
+     *
      */
 
-    public Restaurant(String name, String address, int restId) {
+    public Restaurant(String name, String address, int restId, String imageUrl) {
         this.name = name;
         this.address = address;
         this.restId = restId;
-        //this.type = type;
+        this.imageUrl = imageUrl;
+    }
+
+    /**
+     * Get the url of the image.
+     * @return the url
+     */
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    /**
+     * Set the url of the image.
+     * @param imageUrl the url of the image
+     */
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     /**

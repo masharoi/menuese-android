@@ -11,12 +11,13 @@ import android.support.annotation.NonNull;
 @Entity
 public class Dish {
     @NonNull
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     private int dishId;
     private String name;
     private String ingredients;
     private String description;
-    //private Double price;
+    private int quantity;
+    private Double price;
 
 
     /**
@@ -25,12 +26,17 @@ public class Dish {
      * @param ingredients the ingredients
      * @param description the description
      * @param dishId the id of the item
+     * @param quantity of the dish
+     * @param price of the dish
      */
-    public Dish(int dishId, String name, String ingredients, String description) {
+    @Ignore
+    public Dish(int quantity, int dishId, String name, String ingredients, String description, Double price) {
         this.name = name;
         this.ingredients = ingredients;
         this.description = description;
         this.dishId = dishId;
+        this.quantity = quantity;
+        this.price = price;
     }
 
     /**
@@ -38,12 +44,50 @@ public class Dish {
      * @param name of the dish
      * @param ingredients the ingredients
      * @param description the description
+     * @param quantity of the dish
+     * @param price of the dish
      */
-    @Ignore
-    public Dish(String name, String ingredients, String description) {
+
+    public Dish(int quantity, String name, String ingredients, String description, Double price) {
+        this.quantity = quantity;
         this.name = name;
         this.ingredients = ingredients;
         this.description = description;
+        this.price = price;
+    }
+
+    /**
+     * Get the price of the dish.
+     * @return price of the dish
+     */
+    public Double getPrice() {
+        return price;
+    }
+
+    /**
+     * Sets the price of the dish.
+     * @param price of the dish
+     */
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    /**
+     * Gets the quantity of the dish
+     * @return the quantity
+     */
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    /**
+     * Sets the quantity of the dish.
+     * @param quantity of the dish
+     */
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 
     /**
@@ -109,4 +153,5 @@ public class Dish {
     public void setDescription(String desc) {
         this.description = desc;
     }
+
 }

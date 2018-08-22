@@ -1,15 +1,28 @@
 package com.creations.roitman.menume;
 
+import android.app.Activity;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.creations.roitman.menume.data.Dish;
+import com.creations.roitman.menume.data.MenuDatabase;
+import com.creations.roitman.menume.data.Order;
+import com.creations.roitman.menume.viewModel.CustomViewModelFactory;
+import com.creations.roitman.menume.viewModel.MainViewModel;
+import com.creations.roitman.menume.viewModel.OrderViewModel;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -27,129 +40,71 @@ public class QueryUtils {
 
     public static final String LOG_TAG = QueryUtils.class.getSimpleName();
 
-    private static String sampleMenu = "{\n" +
-            "    \"id\": 4,\n" +
-            "    \"name\": \"GrishJourno\",\n" +
-            "    \"address\": \"Kuntsevo\",\n" +
-            "    \"type\": {\n" +
-            "        \"name\": \"Asian\"\n" +
-            "    },\n" +
-            "    \"image\": \"http://127.0.0.1:8000/media/default.png\",\n" +
-            "    \"menu\": [\n" +
-            "        {\n" +
-            "            \"id\": 2,\n" +
-            "            \"name\": \"SummerMenu\",\n" +
-            "            \"dishes\": [\n" +
-            "                {\n" +
-            "                    \"id\": 2,\n" +
-            "                    \"name\": \"Pasta Carbonara\",\n" +
-            "                    \"ingredients\": \"Pasta, Bacon, Cream\",\n" +
-            "                    \"description\": \"The best carbonara you have ever tried!\",\n" +
-            "                    \"type\": {\n" +
-            "                        \"name\": \"Pasta\"\n" +
-            "                    }\n" +
-            "                }\n" +
-            "            ]\n" +
-            "        }\n" +
-            "    ]\n" +
-            "}";
+    /**
+     * Checks whether the device is connected to the internet.
+     * @param connectivityManager manager
+     * @return true if the device is connected to the internet
+     */
+    public static boolean checkConnectivity(ConnectivityManager connectivityManager) {
 
-    private static String sampleMenuForOrder =
-            "{\n" +
-                    "    \"id\": 4,\n" +
-                    "    \"name\": \"GrishJourno\",\n" +
-                    "    \"address\": \"Kuntsevo\",\n" +
-                    "    \"type\": {\n" +
-                    "        \"name\": \"Asian\"\n" +
-                    "    },\n" +
-                    "    \"image\": \"http://127.0.0.1:8000/media/default.png\",\n" +
-                    "    \"menu\": [\n" +
-                    "        {\n" +
-                    "            \"id\": 2,\n" +
-                    "            \"name\": \"SummerMenu\",\n" +
-                    "            \"dishes\": [\n" +
-                    "                {\n" +
-                    "                    \"id\": 2,\n" +
-                    "                    \"name\": \"Pasta Carbonara\",\n" +
-                    "                    \"ingredients\": \"Pasta, Bacon, Cream\",\n" +
-                    "                    \"description\": \"The best carbonara you have ever tried!\",\n" +
-                    "                    \"type\": {\n" +
-                    "                        \"name\": \"Pasta\"\n" +
-                    "                    }\n" +
-                    "                }\n" +
-                    "\n" +
-                    "{\n" +
-                    "                    \"id\": 3,\n" +
-                    "                    \"name\": «Surf and Turf»,\n" +
-                    "                    \"ingredients\": «Steak, Lobster, Salat»,\n" +
-                    "                    \"description\": \"The best Lobster and Steak you have ever tried!\",\n" +
-                    "                    \"type\": {\n" +
-                    "                        \"name\": «Main»\n" +
-                    "                    }\n" +
-                    "                }\n" +
-                    "\n" +
-                    "{\n" +
-                    "                    \"id\": 4,\n" +
-                    "                    \"name\": «Beef Tartar»,\n" +
-                    "                    \"ingredients\": «Beef, onion, garlic, egg»,\n" +
-                    "                    \"description\": \"The best tartar you have ever tried!\",\n" +
-                    "                    \"type\": {\n" +
-                    "                        \"name\": «Starters»\n" +
-                    "                    }\n" +
-                    "                }\n" +
-                    "\n" +
-                    "\n" +
-                    "            ]\n" +
-                    "        }\n" +
-                    "    ]\n" +
-                    "}";
+         return connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)
+                .getState() == NetworkInfo.State.CONNECTED ||
+                connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+                        .getState() == NetworkInfo.State.CONNECTED;
 
-    private static String sampleJSON = "[\n" +
-            "    {\n" +
-            "        \"id\": 3,\n" +
-            "        \"name\": \"BurgerFirst\",\n" +
-            "        \"address\": \"Arbat street 10\",\n" +
-            "        \"image\": \"http://127.0.0.1:8000/media/default.png\"\n" +
-            "    },\n" +
-            "    {\n" +
-            "        \"id\": 4,\n" +
-            "        \"name\": \"GrishJourno\",\n" +
-            "        \"address\": \"Kuntsevo\",\n" +
-            "        \"image\": \"http://127.0.0.1:8000/media/default.png\"\n" +
-            "    },\n" +
-            "    {\n" +
-            "        \"id\": 5,\n" +
-            "        \"name\": \"FedyasCupCakes\",\n" +
-            "        \"address\": \"Grabskaya street 97\",\n" +
-            "        \"image\": \"http://127.0.0.1:8000/media/default.png\"\n" +
-            "    },\n" +
-            "    {\n" +
-            "        \"id\": 6,\n" +
-            "        \"name\": \"New Restaurant\",\n" +
-            "        \"address\": \"Arbat street 67\",\n" +
-            "        \"image\": \"http://127.0.0.1:8000/media/default.png\"\n" +
-            "    },\n" +
-            "    {\n" +
-            "        \"id\": 7,\n" +
-            "        \"name\": \"Sushi and Pasta\",\n" +
-            "        \"address\": \"Bolshaya Ordynka 15\",\n" +
-            "        \"image\": \"http://127.0.0.1:8000/media/restaurants_images/restoran-babel-v-1-m-nikoloschepovskom-pereulke_19f83_full-36554_qC8tzzS.jpg\"\n" +
-            "    },\n" +
-            "    {\n" +
-            "        \"id\": 10,\n" +
-            "        \"name\": \"testImageResty\",\n" +
-            "        \"address\": \"jkdajksd\",\n" +
-            "        \"image\": \"http://127.0.0.1:8000/media/restaurants_images/restoran-babel-v-1-m-nikoloschepovskom-pereulke_19f83_full-36554_7SAlsue.jpg\"\n" +
-            "    },\n" +
-            "    {\n" +
-            "        \"id\": 11,\n" +
-            "        \"name\": \"testImageResty2\",\n" +
-            "        \"address\": \"nbm\",\n" +
-            "        \"image\": \"http://127.0.0.1:8000/media/restaurants_images/default.png\"\n" +
-            "    }\n" +
-            "]";
+    }
+
+    private static JSONArray convertDishesJSON(List<Dish> dishes) {
+        JSONArray dishArray = new JSONArray();
+        for (int i = 0; i < dishes.size(); i++) {
+            JSONObject dish = new JSONObject();
+            try {
+                dish.put("dish", dishes.get(i).getDishId());
+                dish.put("quantity", dishes.get(i).getQuantity());
+                dishArray.put(dish);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        return dishArray;
+    }
+
+    private static JSONObject createJSON(Order order, List<Dish> dishes) {
+
+        JSONObject result = new JSONObject();
+        try {
+            result.put("restaurant", order.getRestId());
+            result.put("payment_option", order.getPaymentOption());
+            result.put("order_status", order.getOrderStatus());
+            result.put("dishes", convertDishesJSON(dishes));
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return result;
 
 
+    }
+
+
+    public static Order sendOrderData(String url, Order order, List<Dish> dishes) {
+        URL urlClass = createUrl(url);
+        JSONObject jsonToSend = createJSON(order, dishes);
+        Order response = null;
+        try {
+            response = makePostHttpRequest(urlClass, jsonToSend);
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Error making post request", e);
+       }
+
+        Log.e(LOG_TAG, jsonToSend.toString());
+
+        return response;
+
+    }
     /**
      * Fetches the restaurants data via http request.
      * @param requestUrl the target url
@@ -212,9 +167,11 @@ public class QueryUtils {
                 String name = dish.getString("name");
                 String ingredients = dish.getString("ingredients");
                 String desc = dish.getString("description");
+                int id = dish.getInt("id");
+                Double price = dish.getDouble("price");
 
 
-                Dish outDish = new Dish(name, ingredients, desc);
+                Dish outDish = new Dish(0, id, name, ingredients, desc, price);
                 menuDishes.add(outDish);
             }
 
@@ -227,6 +184,25 @@ public class QueryUtils {
 
         return output;
     }
+
+    private static Order extractOrderFromJSON(String orderJSON) {
+        if (TextUtils.isEmpty(orderJSON)) {
+            return null;
+        }
+        Order order = null;
+        try {
+            JSONObject orderData = new JSONObject(orderJSON);
+            int restId = orderData.getInt("restaurant");
+            int paymentOpt = orderData.getInt("payment_option");
+            int orderStat = orderData.getInt("order_status");
+            order = new Order(restId, paymentOpt, orderStat);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return order;
+    }
+
 
     /**
      * Extracts the restaurant data from JSON.
@@ -249,8 +225,9 @@ public class QueryUtils {
                 String name = restaurant.getString("name");
                 String address = restaurant.getString("address");
                 int id = restaurant.getInt("id");
+                String url = restaurant.getString("image");
 
-                finalList.add(new Restaurant(name, address, id));
+                finalList.add(new Restaurant(name, address, id, url));
             }
 
 
@@ -262,17 +239,56 @@ public class QueryUtils {
     }
 
 
-    /**
-     * Returns new URL object from the given string URL.
-     */
-    private static URL createUrl(String stringUrl) {
-        URL url = null;
-        try {
-            url = new URL(stringUrl);
-        } catch (MalformedURLException e) {
-            Log.e(LOG_TAG, "Error with creating URL ", e);
+    private static Order makePostHttpRequest(URL url, JSONObject jsonToSend) throws IOException {
+
+        if (url == null) {
+            return null;
         }
-        return url;
+
+        HttpURLConnection urlConnection = null;
+        DataOutputStream os = null;
+        InputStream inputStream = null;
+        String jsonResponse = "";
+        try {
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setReadTimeout(1000000 /* milliseconds */);
+            urlConnection.setConnectTimeout(1500000 /* milliseconds */);
+            urlConnection.setRequestMethod("POST");
+            urlConnection.setRequestProperty("Content-Type", "application/json");
+            urlConnection.setRequestProperty("Vary", "Accept");
+            urlConnection.setRequestProperty("Authorization", "Token f9f753670794ed3b56b60ae7785eaf073ae3ea84");
+            urlConnection.setRequestProperty("Allow", "POST, OPTIONS");
+            urlConnection.setDoOutput(true);
+
+            os = new DataOutputStream(urlConnection.getOutputStream());
+            os.writeBytes(jsonToSend.toString());
+
+            os.flush();
+            Log.e("MSG" , urlConnection.getResponseMessage());
+
+            if (urlConnection.getResponseCode() == 201) {
+                inputStream = urlConnection.getInputStream();
+                jsonResponse = readFromStream(inputStream);
+                Log.e(LOG_TAG, "This is json" + jsonResponse);
+            } else {
+                Log.e(LOG_TAG, "Error response code: " + urlConnection.getResponseCode());
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+            if (os != null) {
+                os.close();
+            }
+            if (inputStream != null) {
+                inputStream.close();
+            }
+        }
+        return extractOrderFromJSON(jsonResponse);
+
     }
 
     /**
@@ -280,8 +296,6 @@ public class QueryUtils {
      */
     private static String makeHttpRequest(URL url) throws IOException {
         String jsonResponse = "";
-
-        // If the URL is null, then return early.
         if (url == null) {
             return jsonResponse;
         }
@@ -293,17 +307,13 @@ public class QueryUtils {
             urlConnection.setReadTimeout(1000000 /* milliseconds */);
             urlConnection.setConnectTimeout(1500000 /* milliseconds */);
             urlConnection.setRequestMethod("GET");
-            Log.e(LOG_TAG, "Opened the connection");
             urlConnection.connect();
-            Log.e(LOG_TAG, "Connected to the server");
-            Log.e(LOG_TAG, "This is response code: " + urlConnection.getResponseCode());
 
             // If the request was successful (response code 200),
             // then read the input stream and parse the response.
             if (urlConnection.getResponseCode() == 200) {
                 inputStream = urlConnection.getInputStream();
                 jsonResponse = readFromStream(inputStream);
-                Log.e(LOG_TAG, "This is json: " + jsonResponse);
             } else {
                 Log.e(LOG_TAG, "Error response code: " + urlConnection.getResponseCode());
             }
@@ -318,6 +328,20 @@ public class QueryUtils {
             }
         }
         return jsonResponse;
+    }
+
+
+    /**
+     * Returns new URL object from the given string URL.
+     */
+    private static URL createUrl(String stringUrl) {
+        URL url = null;
+        try {
+            url = new URL(stringUrl);
+        } catch (MalformedURLException e) {
+            Log.e(LOG_TAG, "Error with creating URL ", e);
+        }
+        return url;
     }
 
 
