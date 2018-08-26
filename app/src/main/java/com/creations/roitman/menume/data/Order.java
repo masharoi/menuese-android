@@ -1,33 +1,51 @@
 package com.creations.roitman.menume.data;
 
-import android.arch.persistence.room.Entity;
-import android.arch.persistence.room.Ignore;
-import android.arch.persistence.room.PrimaryKey;
-import android.support.annotation.NonNull;
 
-@Entity
+import java.util.List;
+
+
 public class Order {
-    @NonNull
-    @PrimaryKey
+
     private int orderId;
-    private int restId;
+    private String restName;
     private int paymentOption;
     private int orderStatus;
+    private List<DishItem> items;
+    private int restId;
+    private double total;
 
 
     /**
      * Public constructor.
      * @param orderId of the order
-     * @param restId of the restaurant
+     * @param restName of the restaurant
      * @param paymentOption of the order
      * @param orderStatus status of the order
+     * @param items in the order
      */
-    @Ignore
-    public Order(int orderId, int restId, int paymentOption, int orderStatus) {
+
+    public Order(int orderId, String restName, int paymentOption, int orderStatus,
+                 List<DishItem> items, double total) {
         this.orderId = orderId;
-        this.restId = restId;
+        this.restName = restName;
         this.paymentOption = paymentOption;
         this.orderStatus = orderStatus;
+        this.items = items;
+        this.total = total;
+    }
+
+    /**
+     * Public constructor.
+     * @param restName of the restaurant
+     * @param paymentOption of the order
+     * @param orderStatus status of the order
+     * @param items in the order
+     */
+    public Order(String restName, int paymentOption, int orderStatus, List<DishItem> items) {
+        this.restName = restName;
+        this.paymentOption = paymentOption;
+        this.orderStatus = orderStatus;
+        this.items = items;
     }
 
     /**
@@ -35,13 +53,55 @@ public class Order {
      * @param restId of the restaurant
      * @param paymentOption of the order
      * @param orderStatus status of the order
+     * @param items in the order
      */
-    public Order(int restId, int paymentOption, int orderStatus) {
+    public Order(int restId, int paymentOption, int orderStatus, List<DishItem> items) {
         this.restId = restId;
         this.paymentOption = paymentOption;
         this.orderStatus = orderStatus;
+        this.items = items;
     }
 
+
+    public void setTotal(double total) {
+        this.total = total;
+    }
+
+    public double getTotal() {
+        return total;
+    }
+
+    /**
+     * Get the id of the restaurant.
+     * @return the id
+     */
+    public int getRestId() {
+        return restId;
+    }
+
+    /**
+     * Set the id of the restaurant.
+     * @param restId id of the restaurant
+     */
+    public void setRestId(int restId) {
+        this.restId = restId;
+    }
+
+    /**
+     * Get the items in the order.
+     * @return the list of dishes
+     */
+    public List<DishItem> getItems() {
+        return items;
+    }
+
+    /**
+     * Set the items in the order.
+     * @param items in the order
+     */
+    public void setItems(List<DishItem> items) {
+        this.items = items;
+    }
 
     /**
      * Get the id of the order.
@@ -60,19 +120,19 @@ public class Order {
     }
 
     /**
-     * Get the id of the order.
-     * @return id of the order
+     * Get the name of the order.
+     * @return name of the order
      */
-    public int getRestId() {
-        return restId;
+    public String getRestName() {
+        return restName;
     }
 
     /**
-     * Sets the id of the order.
-     * @param id of the order
+     * Sets the name of the order.
+     * @param name of the order
      */
-    public void setRestId(int id) {
-        this.restId = id;
+    public void setRestName(String name) {
+        this.restName = name;
     }
 
     /**

@@ -34,9 +34,10 @@
                                   <option name="values">
                                     <map>
                                       <entry key="assetType" value="IMAGE" />
-                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/round-assignment_ind-black-18/2x/round_assignment_ind_black_18dp.png" />
-                                      <entry key="outputName" value="ic_profile_tab" />
-                                      <entry key="themeColor" value="e5111d" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/round-near_me-black-18/2x/round_near_me_black_18dp.png" />
+                                      <entry key="outputName" value="ic_received_order" />
+                                      <entry key="theme" value="CUSTOM" />
+                                      <entry key="themeColor" value="1a831b" />
                                     </map>
                                   </option>
                                 </PersistentState>

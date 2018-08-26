@@ -1,21 +1,16 @@
-package com.creations.roitman.menume;
+package com.creations.roitman.menume.utilities;
 
-import android.app.Activity;
-import android.arch.lifecycle.Observer;
-import android.arch.lifecycle.ViewModelProviders;
-import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.creations.roitman.menume.data.DishItem;
+import com.creations.roitman.menume.data.Menu;
+import com.creations.roitman.menume.data.OrderedDish;
+import com.creations.roitman.menume.data.Restaurant;
 import com.creations.roitman.menume.data.Dish;
-import com.creations.roitman.menume.data.MenuDatabase;
 import com.creations.roitman.menume.data.Order;
-import com.creations.roitman.menume.viewModel.CustomViewModelFactory;
-import com.creations.roitman.menume.viewModel.MainViewModel;
-import com.creations.roitman.menume.viewModel.OrderViewModel;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -54,12 +49,12 @@ public class QueryUtils {
 
     }
 
-    private static JSONArray convertDishesJSON(List<Dish> dishes) {
+    private static JSONArray convertDishesJSON(List<DishItem> dishes) {
         JSONArray dishArray = new JSONArray();
         for (int i = 0; i < dishes.size(); i++) {
             JSONObject dish = new JSONObject();
             try {
-                dish.put("dish", dishes.get(i).getDishId());
+                dish.put("dish", ((Dish)dishes.get(i)).getDishId());
                 dish.put("quantity", dishes.get(i).getQuantity());
                 dishArray.put(dish);
             } catch (JSONException e) {
@@ -71,14 +66,14 @@ public class QueryUtils {
         return dishArray;
     }
 
-    private static JSONObject createJSON(Order order, List<Dish> dishes) {
+    private static JSONObject createJSON(Order order) {
 
         JSONObject result = new JSONObject();
         try {
             result.put("restaurant", order.getRestId());
             result.put("payment_option", order.getPaymentOption());
             result.put("order_status", order.getOrderStatus());
-            result.put("dishes", convertDishesJSON(dishes));
+            result.put("items", convertDishesJSON(order.getItems()));
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -90,21 +85,37 @@ public class QueryUtils {
     }
 
 
-    public static Order sendOrderData(String url, Order order, List<Dish> dishes) {
+    public static Order sendOrderData(String url, Order order) {
         URL urlClass = createUrl(url);
-        JSONObject jsonToSend = createJSON(order, dishes);
+        JSONObject jsonToSend = createJSON(order);
         Order response = null;
+        Log.e(LOG_TAG, "This is json to send: " + jsonToSend);
         try {
             response = makePostHttpRequest(urlClass, jsonToSend);
         } catch (IOException e) {
             Log.e(LOG_TAG, "Error making post request", e);
        }
 
-        Log.e(LOG_TAG, jsonToSend.toString());
+        Log.e(LOG_TAG, response.toString());
+//        response.add(new OrderedDish(1,"Carbonara", 2, 100));
+//        response.add(new OrderedDish(1,"California rolls", 3, 100));
 
         return response;
 
     }
+
+    public static Order fetchReceiptData(String url) {
+        URL urlClass = createUrl(url);
+        String jsonResponse = null;
+        try {
+            jsonResponse = makeHttpRequest(urlClass);
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Error closing input stream", e);
+        }
+
+        return extractOrderFromJSON(jsonResponse);
+    }
+
     /**
      * Fetches the restaurants data via http request.
      * @param requestUrl the target url
@@ -153,7 +164,7 @@ public class QueryUtils {
         }
 
         Menu output = new Menu();
-        List<Dish> menuDishes = new ArrayList<Dish>();
+        List<DishItem> menuDishes = new ArrayList<DishItem>();
 
         try {
             JSONObject response = new JSONObject(menuJSON);
@@ -189,18 +200,35 @@ public class QueryUtils {
         if (TextUtils.isEmpty(orderJSON)) {
             return null;
         }
-        Order order = null;
+        Log.e(LOG_TAG, "This is orderJSON " + orderJSON);
+        List<DishItem> order = new ArrayList<>();
+        Order result = null;
         try {
             JSONObject orderData = new JSONObject(orderJSON);
-            int restId = orderData.getInt("restaurant");
+            double totalPrice = orderData.getDouble("total_price");
+            String restName = orderData.getString("restaurant");
+            int id = orderData.getInt("id");
             int paymentOpt = orderData.getInt("payment_option");
             int orderStat = orderData.getInt("order_status");
-            order = new Order(restId, paymentOpt, orderStat);
+            JSONArray items = orderData.optJSONArray("items");
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject dishData = items.getJSONObject(i);
+                JSONObject dish = dishData.getJSONObject("dish");
+                String name = dish.getString("name");
+                double price = dish.getDouble("price");
+                int stat = dishData.getInt("status");
+                int quant = dishData.getInt("quantity");
+                OrderedDish resultDish = new OrderedDish(stat, name, quant, price);
+                order.add(resultDish);
+            }
+
+            result = new Order(id, restName, paymentOpt, orderStat, order, totalPrice);
+
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        return order;
+        return result;
     }
 
 
@@ -362,6 +390,5 @@ public class QueryUtils {
         }
         return output.toString();
     }
-
 
 }

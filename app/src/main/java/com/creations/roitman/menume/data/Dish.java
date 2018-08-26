@@ -9,15 +9,13 @@ import android.support.annotation.NonNull;
  * This class represents the dish in the menu.
  */
 @Entity
-public class Dish {
+public class Dish extends DishItem implements ListItem{
     @NonNull
     @PrimaryKey
     private int dishId;
-    private String name;
     private String ingredients;
     private String description;
-    private int quantity;
-    private Double price;
+
 
 
     /**
@@ -31,13 +29,13 @@ public class Dish {
      */
     @Ignore
     public Dish(int quantity, int dishId, String name, String ingredients, String description, Double price) {
-        this.name = name;
+        super(name, quantity, price);
         this.ingredients = ingredients;
         this.description = description;
         this.dishId = dishId;
-        this.quantity = quantity;
-        this.price = price;
     }
+
+
 
     /**
      * Public constructor that does not specify the id of the dish.
@@ -49,46 +47,11 @@ public class Dish {
      */
 
     public Dish(int quantity, String name, String ingredients, String description, Double price) {
-        this.quantity = quantity;
-        this.name = name;
+        super(name, quantity, price);
         this.ingredients = ingredients;
         this.description = description;
-        this.price = price;
     }
 
-    /**
-     * Get the price of the dish.
-     * @return price of the dish
-     */
-    public Double getPrice() {
-        return price;
-    }
-
-    /**
-     * Sets the price of the dish.
-     * @param price of the dish
-     */
-    public void setPrice(Double price) {
-        this.price = price;
-    }
-
-    /**
-     * Gets the quantity of the dish
-     * @return the quantity
-     */
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    /**
-     * Sets the quantity of the dish.
-     * @param quantity of the dish
-     */
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
 
     /**
      * Gets the id of the dish.
@@ -107,14 +70,6 @@ public class Dish {
     }
 
     /**
-     * Gets the name of the dish.
-     * @return the name of the dish
-     */
-    public String getName() {
-        return this.name;
-    }
-
-    /**
      * Gets the ingredients of the dish.
      * @return the ingredients
      */
@@ -130,13 +85,6 @@ public class Dish {
         return this.description;
     }
 
-    /**
-     * Sets the name of the dish.
-     * @param name of the dish
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
 
     /**
      * Sets the ingredients of the dish.
@@ -154,4 +102,13 @@ public class Dish {
         this.description = desc;
     }
 
+    @Override
+    public int getListItemType() {
+        return ListItem.TYPE_DISH;
+    }
+
+    @Override
+    public String toString() {
+        return this.getName() + this.getQuantity();
+    }
 }

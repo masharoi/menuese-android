@@ -12,6 +12,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.creations.roitman.menume.data.Restaurant;
+
 import java.io.InputStream;
 import java.util.List;
 
@@ -29,7 +31,7 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Nu
      * Interface for the Listener of the items in the RecyclerView.
      */
     public interface OnItemClickListener {
-        void onItemClick(int id);
+        void onItemClick(int id, String name);
     }
 
     @Override
@@ -89,7 +91,8 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Nu
             new DownloadImageTask(restImage).execute(restaurants.get(listIndex).getImageUrl());
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
-                    listener.onItemClick(restaurants.get(listIndex).getRestId());
+                    listener.onItemClick(restaurants.get(listIndex).getRestId(),
+                            restaurants.get(listIndex).getName());
                 }
             });
         }

@@ -3,38 +3,41 @@ package com.creations.roitman.menume;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.creations.roitman.menume.data.Dish;
+import com.creations.roitman.menume.data.DishItem;
+import com.creations.roitman.menume.data.ListItem;
 import com.creations.roitman.menume.data.MenuDatabase;
+import com.creations.roitman.menume.utilities.PreferencesUtils;
 
 import java.util.List;
 
-public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberViewHolder> {
+public class DishesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
 
     final private String LOG_TAG = DishesAdapter.class.getName();
-    private List<Dish> dishes;
+    private List<DishItem> dishes;
     private final DishesAdapter.OnItemClickListener listener;
     private MenuDatabase mDb;
     private TextView total;
-    private static final String APP_PREFERENCES = "myprefs";
-    private static final String APP_PREFERENCES_PRICE = "totalPrice";
+    private static final String UPDATE_ORDER = "isUpdateDue";
+    private Context context;
     SharedPreferences mSettings;
 
-    public DishesAdapter(List<Dish> dishes, DishesAdapter.OnItemClickListener listener, TextView total) {
+    public DishesAdapter(List<DishItem> dishes, DishesAdapter.OnItemClickListener listener, TextView total) {
         this.dishes = dishes;
         this.listener = listener;
         this.total = total;
     }
 
-    public DishesAdapter(List<Dish> dishes, DishesAdapter.OnItemClickListener listener) {
+    public DishesAdapter(List<DishItem> dishes, DishesAdapter.OnItemClickListener listener) {
         this.dishes = dishes;
         this.listener = listener;
     }
@@ -53,19 +56,39 @@ public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberView
     }
 
     @Override
-    public DishesAdapter.NumberViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        Context context = parent.getContext();
-        int layoutIdForListItem = R.layout.list_item_dish;
-        LayoutInflater inflater = LayoutInflater.from(context);
-
-        View view = inflater.inflate(layoutIdForListItem, parent, false);
-        DishesAdapter.NumberViewHolder holder = new DishesAdapter.NumberViewHolder(view);
-        return holder;
+    public int getItemViewType(int position) {
+        return dishes.get(position).getListItemType();
     }
 
     @Override
-    public void onBindViewHolder(DishesAdapter.NumberViewHolder holder, int position) {
-        holder.bind(position, listener);
+    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        context = parent.getContext();
+
+        if (viewType== ListItem.TYPE_DISH) {
+            int layoutIdForListItem = R.layout.list_item_dish;
+            LayoutInflater inflater = LayoutInflater.from(context);
+            View view = inflater.inflate(layoutIdForListItem, parent, false);
+            DishViewHolder holder = new DishViewHolder(view);
+            return holder;
+        } else if (viewType==ListItem.TYPE_ORDERED_DISH) {
+            int layoutIdForListItem = R.layout.list_item_dish_in_check;
+            LayoutInflater inflater = LayoutInflater.from(context);
+            View view = inflater.inflate(layoutIdForListItem, parent, false);
+            OrderedDishViewHolder holder = new OrderedDishViewHolder(view);
+            return holder;
+        }
+        throw new RuntimeException("This type is invalid: " + viewType);
+    }
+
+    @Override
+    public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+        if (holder instanceof DishViewHolder) {
+            DishViewHolder h = (DishViewHolder) holder;
+            h.bind(position, listener);
+        } else if (holder instanceof OrderedDishViewHolder) {
+            OrderedDishViewHolder h = (OrderedDishViewHolder) holder;
+            h.bind(position, listener);
+        }
     }
 
     @Override
@@ -73,10 +96,80 @@ public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberView
         return dishes.size();
     }
 
+    class OrderedDishViewHolder extends RecyclerView.ViewHolder {
+
+        private TextView name;
+        private TextView quantity;
+        private ImageButton stateAccepted;
+        private ImageButton stateIsCooked;
+        private ImageButton stateReadyToServe;
+
+        public OrderedDishViewHolder(View itemView) {
+            super(itemView);
+
+            stateAccepted = (ImageButton) itemView.findViewById(R.id.state_ordered);
+            stateIsCooked = (ImageButton) itemView.findViewById(R.id.state_is_cooking);
+            stateReadyToServe = (ImageButton) itemView.findViewById(R.id.state_ready_to_serve);
+            quantity = (TextView) itemView.findViewById(R.id.quantity);
+            name = (TextView) itemView.findViewById(R.id.name);
+        }
+
+        void bind(final int listIndex, final DishesAdapter.OnItemClickListener listener) {
+            name.setText(dishes.get(listIndex).getName());
+            quantity.setText(String.valueOf(dishes.get(listIndex).getQuantity()));
+            stateAccepted.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Toast.makeText(context, "The order is accepted.", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            stateIsCooked.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Toast.makeText(context, "The dish is being cooked.", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            stateReadyToServe.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Toast.makeText(context, "This dish will be served shortly.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    public void updateTotal() {
+        SharedPreferences.Editor editor = mSettings.edit();
+        editor.putFloat(PreferencesUtils.TOTAL_CURRENT_PRICE, 0);
+        editor.apply();
+        double result;
+        result = mSettings.getFloat(PreferencesUtils.TOTAL_CURRENT_PRICE, 0);
+//        Log.e(LOG_TAG, "This is the initial result" + result);
+        for (int i = 0; i < dishes.size(); i++) {
+            if (dishes.get(i) instanceof Dish) {
+                double price = dishes.get(i).getPrice() * dishes.get(i).getQuantity();
+                result = result + price;
+            }
+        }
+
+        double finalPrice = result + mSettings.getInt(PreferencesUtils.TOTAL_PRICE, 0);
+        if (!(total == null)) {
+//            Log.e(LOG_TAG, "this is the total price " + result);
+            total.setText(String.valueOf(finalPrice));
+        }
+//        Log.e(LOG_TAG, "This is newly calculated result " + result);
+        editor.putFloat(PreferencesUtils.TOTAL_CURRENT_PRICE, (float) finalPrice);
+        editor.putBoolean(PreferencesUtils.UPDATE_ORDER, true);
+        editor.apply();
+
+    }
+
     /**
      * Cache of the children views for a list item.
      */
-    class NumberViewHolder extends RecyclerView.ViewHolder {
+    class DishViewHolder extends RecyclerView.ViewHolder {
 
         int itemQuantity;
 
@@ -95,7 +188,7 @@ public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberView
          * @param itemView The View that you inflated in
          *                 {@link RestaurantAdapter#onCreateViewHolder(ViewGroup, int)}
          */
-        public NumberViewHolder(View itemView) {
+        public DishViewHolder(View itemView) {
             super(itemView);
 
             name = (TextView) itemView.findViewById(R.id.textView_name);
@@ -135,28 +228,11 @@ public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberView
             });
         }
 
-        private void updateTotal() {
-            SharedPreferences.Editor editor = mSettings.edit();
-            editor.putFloat(APP_PREFERENCES_PRICE, 0);
-            editor.apply();
-            double result;
-            result = mSettings.getFloat(APP_PREFERENCES_PRICE, 0);
-            Log.e(LOG_TAG, "This is the initial result" + result);
-            for (int i = 0; i < dishes.size(); i++) {
-                double price = dishes.get(i).getPrice() * dishes.get(i).getQuantity();
-                Log.e(LOG_TAG, "This is the price (local)" + price);
-                result = result + price;
-            }
-            if (!(total == null)) {
-                Log.e(LOG_TAG, "this is the total price " + result);
-                total.setText(String.valueOf(result));
-            }
-            Log.e(LOG_TAG, "This is newly calculated result " + result);
-            editor.putFloat(APP_PREFERENCES_PRICE, (float) result);
-            editor.apply();
-            double price = mSettings.getFloat(APP_PREFERENCES_PRICE, 0);
-            Log.e(LOG_TAG, "This is the price " + price);
 
+        private void updateOrderBtn() {
+            SharedPreferences.Editor editor = mSettings.edit();
+            editor.putBoolean(UPDATE_ORDER, true);
+            editor.apply();
         }
 
         /**
@@ -168,10 +244,10 @@ public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberView
             itemQuantity = Integer.parseInt(String.valueOf(dishes.get(listIndex).getQuantity()));
 
             name.setText(dishes.get(listIndex).getName());
-            ingredients.setText(dishes.get(listIndex).getIngredients());
-            description.setText(dishes.get(listIndex).getDescription());
+            ingredients.setText(((Dish)dishes.get(listIndex)).getIngredients());
+            description.setText(((Dish)dishes.get(listIndex)).getDescription());
             quantity.setText(String.valueOf(itemQuantity));
-            first_addition.setText(String.valueOf(dishes.get(listIndex).getPrice() + "\u20BD"));
+            first_addition.setText(String.valueOf(((Dish)dishes.get(listIndex)).getPrice() + "\u20BD"));
 
             if (itemQuantity > 0) {
                // Log.e(LOG_TAG, "Item quantity is greater than 0");
@@ -187,12 +263,12 @@ public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberView
                     if (itemQuantity == 1) {
                         setInitial();
                         dishes.get(listIndex).setQuantity(0);
-                        updateDb(dishes.get(listIndex));
+                        updateDb((Dish)dishes.get(listIndex));
                         updateTotal();
                     } else {
                         itemQuantity--;
                         setQuantity(listIndex);
-                        updateDb(dishes.get(listIndex));
+                        updateDb((Dish)dishes.get(listIndex));
                         updateTotal();
                     }
                 }
@@ -202,8 +278,9 @@ public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberView
                 public void onClick(View view) {
                     itemQuantity++;
                     setQuantity(listIndex);
-                    updateDb(dishes.get(listIndex));
+                    updateDb((Dish)dishes.get(listIndex));
                     updateTotal();
+                    updateOrderBtn();
                 }
             });
 
@@ -213,8 +290,9 @@ public class DishesAdapter extends RecyclerView.Adapter<DishesAdapter.NumberView
                    setItemAdded();
                    itemQuantity++;
                    setQuantity(listIndex);
-                   updateDb(dishes.get(listIndex));
+                   updateDb((Dish)dishes.get(listIndex));
                    updateTotal();
+                   updateOrderBtn();
 
                 }
             });

@@ -2,6 +2,7 @@ package com.creations.roitman.menume;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.Fragment;
@@ -14,6 +15,7 @@ import android.widget.Toast;
 
 import com.creations.roitman.menume.data.Dish;
 import com.creations.roitman.menume.data.MenuDatabase;
+import com.creations.roitman.menume.utilities.PreferencesUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -31,8 +33,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String LOG_TAG = MainActivity.class.getName();
 
     private MenuDatabase mDb;
-    private static final String APP_PREFERENCES = "myprefs";
-    private static final String APP_PREFERENCES_HOME = "isMenu";
     SharedPreferences mSettings;
 
     @Override
@@ -41,12 +41,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mDb = MenuDatabase.getInstance(getApplicationContext());
-        mSettings = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE);
+        mSettings = PreferenceManager.getDefaultSharedPreferences(this);
 
         AppExecutors.getInstance().diskIO().execute(new Runnable() {
             @Override
             public void run() {
-                if (!mSettings.getBoolean(APP_PREFERENCES_HOME, true)) {
+                if (!mSettings.getBoolean(PreferencesUtils.IS_REST_CHOSEN, true)) {
                     mDb.daoAccess().deleteDish();
                 }
             }
@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
         buildFragmentsList();
 
         // Set the 0th Fragment to be displayed by default.
-        if (mSettings.getBoolean(APP_PREFERENCES_HOME, true)) {
+        if (mSettings.getBoolean(PreferencesUtils.IS_REST_CHOSEN, true)) {
             switchFragment(1, TAG_FRAGMENT_MENU);
         } else {
             switchFragment(0,  TAG_FRAGMENT_HOME);
@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
             switch (item.getItemId()) {
                 case R.id.bottombaritem_home:
-                    if (mSettings.getBoolean(APP_PREFERENCES_HOME, true)) {
+                    if (mSettings.getBoolean(PreferencesUtils.IS_REST_CHOSEN, true)) {
                         switchFragment(1, TAG_FRAGMENT_MENU);
                     } else  {
                         switchFragment(0,  TAG_FRAGMENT_HOME);

@@ -1,4 +1,4 @@
-package com.creations.roitman.menume;
+package com.creations.roitman.menume.data;
 
 import com.creations.roitman.menume.data.Dish;
 
@@ -11,14 +11,14 @@ import java.util.List;
 public class Menu {
 
     private String restName;
-    private List<Dish> dishes;
+    private List<DishItem> dishes;
 
     /**
      * Public constructor.
      * @param restName the name of the restaurant
      * @param dishes the dishes in the menu
      */
-    public Menu(String restName, List<Dish> dishes) {
+    public Menu(String restName, List<DishItem> dishes) {
         this.restName = restName;
         this.dishes = dishes;
     }
@@ -28,7 +28,7 @@ public class Menu {
      */
     public Menu() {
         this.restName = "";
-        this.dishes = new ArrayList<Dish>();
+        this.dishes = new ArrayList<DishItem>();
     }
 
     /**
@@ -61,7 +61,7 @@ public class Menu {
      * Gets the dishes in the menu.
      * @return the list that represents the dishes in the menu
      */
-    public List<Dish> getDishes() {
+    public List<DishItem> getDishes() {
         return this.dishes;
     }
 }

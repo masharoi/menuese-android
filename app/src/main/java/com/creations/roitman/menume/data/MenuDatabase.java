@@ -10,7 +10,7 @@ import android.util.Log;
  * The local database for the items in the order.
  */
 
-@Database(entities = {Dish.class, Order.class}, version = 4, exportSchema = false)
+@Database(entities = {Dish.class}, version = 7, exportSchema = false)
 public abstract class MenuDatabase extends RoomDatabase {
 
     private static final String LOG_TAG = MenuDatabase.class.getSimpleName();

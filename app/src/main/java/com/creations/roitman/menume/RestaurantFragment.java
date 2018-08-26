@@ -1,7 +1,6 @@
 package com.creations.roitman.menume;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -16,6 +15,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.creations.roitman.menume.data.Restaurant;
+import com.creations.roitman.menume.utilities.PreferencesUtils;
+import com.creations.roitman.menume.utilities.QueryUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,11 +31,6 @@ public class RestaurantFragment extends Fragment implements android.support.v4.a
     private RestaurantAdapter mAdapter;
     private RecyclerView mNumbersList;
     private List<Restaurant> restaurants = new ArrayList<Restaurant>();
-
-    private SharedPreferences mSettings;
-    public static final String APP_PREFERENCES = "myprefs";
-    public static final String APP_PREFERENCES_HOME = "isMenu";
-
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -52,18 +50,17 @@ public class RestaurantFragment extends Fragment implements android.support.v4.a
         mNumbersList.addItemDecoration(itemDecorator);
 
         mAdapter = new RestaurantAdapter(restaurants, new RestaurantAdapter.OnItemClickListener() {
-            @Override public void onItemClick(int id) {
+            @Override public void onItemClick(int id, String name) {
                 MenuFragment nextFrag = new MenuFragment();
                 Bundle bundle = new Bundle();
                 bundle.putInt("REST_ID", id);
+                bundle.putString("REST_NAME", name);
                 nextFrag.setArguments(bundle);
                 getActivity().getSupportFragmentManager().beginTransaction()
                         .replace(R.id.frame_fragment_holder, nextFrag,"menuFragment")
                         .commit();
-                mSettings = getActivity().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE);
-                SharedPreferences.Editor editor = mSettings.edit();
-                editor.putBoolean(APP_PREFERENCES_HOME, true);
-                editor.apply();
+                PreferencesUtils.setRestaurantChosen(true, getContext());
+                PreferencesUtils.setIsOrdered(false, getContext());
             }
         });
         mNumbersList.setAdapter(mAdapter);

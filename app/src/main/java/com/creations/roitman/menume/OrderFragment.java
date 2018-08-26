@@ -6,9 +6,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.Loader;
 import android.support.v7.widget.DividerItemDecoration;
@@ -19,15 +21,19 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.creations.roitman.menume.data.Dish;
+import com.creations.roitman.menume.data.DishItem;
 import com.creations.roitman.menume.data.MenuDatabase;
 import com.creations.roitman.menume.data.Order;
+import com.creations.roitman.menume.data.OrderedDish;
+import com.creations.roitman.menume.utilities.GenUtils;
+import com.creations.roitman.menume.utilities.PreferencesUtils;
+import com.creations.roitman.menume.utilities.QueryUtils;
 import com.creations.roitman.menume.viewModel.MainViewModel;
 
 import java.util.ArrayList;
@@ -35,85 +41,50 @@ import java.util.List;
 
 import static android.view.View.GONE;
 
-public class OrderFragment  extends Fragment implements android.support.v4.app.LoaderManager.LoaderCallbacks<Order> {
+public class OrderFragment  extends Fragment {
 
     final private String LOG_TAG =  OrderFragment.class.getName();
-    private static final String DATA_TYPE = "order";
+    private static final String DATA_TYPE_ORDER_POST = "order";
+    public static final String DATA_TYPE_ORDER_GET = "check";
+    private static final int POST_LOADER = 2;
+    private static final int GET_LOADER = 3;
     private DishesAdapter mAdapter;
     private RecyclerView orderList;
     private View beforeOrder, emptyState;
 
     private MenuDatabase mDb;
     private SharedPreferences mSettings;
-    public static final String APP_PREFERENCES = "myprefs";
-    private static final String APP_PREFERENCES_PRICE = "totalPrice";
-    public static final String APP_PREFERENCES_RESTID = "restaurantID";
-    private static final String APP_PREFERENCES_HOME = "isMenu";
 
-    private List<Dish> order = new ArrayList<Dish>();
+    private List<DishItem> order = new ArrayList<DishItem>();
+    private List<DishItem> dishesInCheck = new ArrayList<DishItem>();
     private Button orderBtn;
     private TextView totalPrice;
     private RadioGroup rgroup;
     private int paymentOption;
     private Order orderData;
-
-    private View.OnClickListener radioButtonClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-            RadioButton r = (RadioButton) view;
-            if (R.id.payment_type_cash == r.getId()) {
-                paymentOption = 0;
-            } else {
-                paymentOption = 1;
-            }
-            orderBtn.setBackgroundColor(getResources().getColor(R.color.holo_red_dark));
-        }
-    };
-
-    private void makePostRequest() {
-
-        int restId = mSettings.getInt(APP_PREFERENCES_RESTID, 0);
-        orderData = new Order(restId, paymentOption, 1);
-
-        //check the network connectivity
-        ConnectivityManager connectivityManager = (ConnectivityManager)getContext()
-                .getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        if(QueryUtils.checkConnectivity(connectivityManager)) {
-            getLoaderManager().initLoader(2, null, this);
-        } else {
-            //empty = rootView.findViewById(R.id.emptyStateMessage);
-            //empty.setText("No internet connection.");
-        }
-    }
-
-    private View.OnClickListener orderBtnListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-        makePostRequest();
-        }
-    };
-
+    private double receiptPrice;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        Log.e(LOG_TAG, "The order fragment is created");
+        Log.e(LOG_TAG, "The order fragment is created" + order.size());
         View rootView = inflater.inflate(R.layout.general_order_fragment, container, false);
         beforeOrder = rootView.findViewById(R.id.before_order);
         emptyState = rootView.findViewById(R.id.empty_menu);
         emptyState.setVisibility(View.INVISIBLE);
 
-
         mDb = MenuDatabase.getInstance(getActivity().getApplicationContext());
-        mSettings = getActivity().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE);
+        mSettings = PreferenceManager.getDefaultSharedPreferences(getContext());
+        mSettings.registerOnSharedPreferenceChangeListener(preferenceListener);
 
         orderBtn = (Button) rootView.findViewById(R.id.order_btn);
+        if (mSettings.getBoolean(PreferencesUtils.UPDATE_ORDER, false)) {
+            orderBtn.setBackgroundColor(getResources().getColor(R.color.holo_red_dark));
+        }
         orderBtn.setOnClickListener(orderBtnListener);
         orderList = (RecyclerView) rootView.findViewById(R.id.rv_order);
         totalPrice = (TextView) rootView.findViewById(R.id.total_price);
         rgroup = (RadioGroup) rootView.findViewById(R.id.rgroup);
-
 
         RadioButton cashButton = (RadioButton) rootView.findViewById(R.id.payment_type_cash);
         cashButton.setOnClickListener(radioButtonClickListener);
@@ -138,58 +109,210 @@ public class OrderFragment  extends Fragment implements android.support.v4.app.L
         mAdapter.setSettings(mSettings);
         orderList.setAdapter(mAdapter);
 
-        MainViewModel vm = ViewModelProviders.of(this).get(MainViewModel.class);
-        vm.getOrder().observe(this, new Observer<List<Dish>>() {
-            @Override
-            public void onChanged(@Nullable List<Dish> dishes) {
-                order.clear();
-                order.addAll(dishes);
-                mAdapter.notifyDataSetChanged();
-                if (order.isEmpty()) {
-                    beforeOrder.setVisibility(GONE);
-                    emptyState.setVisibility(View.VISIBLE);
-                }
-                else {
-                    emptyState.setVisibility(View.GONE);
-                    beforeOrder.setVisibility(View.VISIBLE);
-                    double price = mSettings.getFloat(APP_PREFERENCES_PRICE, 0);
-                    totalPrice.setText(String.valueOf(price) + "\u20BD");
-                }
-            }
-        });
+        for (int i = 0; i<order.size(); i++) {
+            Log.e(LOG_TAG, "This is name when init " + order.get(i).getName());
+        }
 
+        MainViewModel vm = ViewModelProviders.of(this).get(MainViewModel.class);
+        vm.getOrder().observe(this, orderObserver);
+
+        if (mSettings.getBoolean(PreferencesUtils.IS_ORDERED, false)) {
+            makeRequest(GET_LOADER, getRequestLoader);
+        }
 
         return rootView;
 
     }
 
-    @NonNull
-    @Override
-    public Loader<Order> onCreateLoader(int id, @Nullable Bundle args) {
-        String POST_URL = "http://grython.pythonanywhere.com/api/orders/add";
-        return  new MenuLoader(getContext(), POST_URL, DATA_TYPE, orderData, order);
-    }
-
-    @Override
-    public void onLoadFinished(@NonNull Loader<Order> loader, Order data) {
-        Log.e(LOG_TAG, "Load is finished");
-        AppExecutors.getInstance().diskIO().execute(new Runnable() {
-            @Override
-            public void run() {
-                mDb.daoAccess().deleteDish();
+    /**
+     * This is the observer for the data set that contains the order.
+     */
+    private Observer<List<Dish>> orderObserver = new Observer<List<Dish>>() {
+        @Override
+        public void onChanged(@Nullable List<Dish> dishes) {
+            double price = mSettings.getFloat(PreferencesUtils.TOTAL_CURRENT_PRICE, 0);
+            List<DishItem> temp = new ArrayList<>();
+            int  totalSize = order.size();
+            for (int i = 0; i < totalSize; i++) {
+                if (order.get(i) instanceof OrderedDish) {
+                    temp.add(order.get(i));
+                }
             }
-        });
-        SharedPreferences.Editor editor = mSettings.edit();
-        editor.putBoolean(APP_PREFERENCES_HOME, false);
-        editor.apply();
-        if (data != null) {
-             beforeOrder.setVisibility(GONE);
-             emptyState.setVisibility(View.VISIBLE);
+            order.clear();
+            order.addAll(temp);
+            order.addAll(dishes);
+            mAdapter.notifyDataSetChanged();
+            if (order.isEmpty() && !mSettings.getBoolean(PreferencesUtils.IS_ORDERED, false)) {
+                beforeOrder.setVisibility(GONE);
+                emptyState.setVisibility(View.VISIBLE);
+            }
+            else {
+                Log.e(LOG_TAG, "Price: " + price);
+                emptyState.setVisibility(View.GONE);
+                beforeOrder.setVisibility(View.VISIBLE);
+                totalPrice.setText(String.valueOf(price) + getString(R.string.ruble));
+            }
+
+            for (int i = 0; i<order.size(); i++) {
+                Log.e(LOG_TAG, "This is name after the order changed " + order.get(i).getName());
+            }
         }
+    };
+
+    /**
+     * Loader for the GET http request, which occurs when the user has already created an order
+     * and now in check tab. This is needed in order to update the check.
+     */
+    private android.support.v4.app.LoaderManager.LoaderCallbacks<Order> getRequestLoader =
+            new LoaderManager.LoaderCallbacks<Order>() {
+                @NonNull
+                @Override
+                public Loader<Order> onCreateLoader(int id, @Nullable Bundle args) {
+                    String GET_URL = "http://grython.pythonanywhere.com/api/orders/" +
+                            mSettings.getInt(PreferencesUtils.ORDER_ID, 0);
+                    return  new MenuLoader<Order>(getContext(), GET_URL, DATA_TYPE_ORDER_GET);                }
+
+                @Override
+                public void onLoadFinished(@NonNull Loader<Order> loader, Order data) {
+                    Log.e(LOG_TAG, "Load is finished");
+                    if (data != null) {
+                        List<DishItem> temp = new ArrayList<>();
+                        for (int i = 0; i < order.size(); i++) {
+                            if (order.get(i) instanceof Dish) {
+                                temp.add(order.get(i));
+                            }
+                        }
+                        order.clear();
+                        order.addAll(temp);
+                        order.addAll(data.getItems());
+                        mAdapter.notifyDataSetChanged();
+                        PreferencesUtils.setTotal((int)data.getTotal(), getContext());
+                        for (int i = 0; i<order.size(); i++) {
+                            Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
+                        }
+                        mAdapter.updateTotal();
+//            beforeOrder.setVisibility(View.VISIBLE);
+//             emptyState.setVisibility(View.VISIBLE);
+
+                    }
+                }
+
+                @Override
+                public void onLoaderReset(@NonNull Loader<Order> loader) {
+                    order.clear();
+                    mAdapter.notifyDataSetChanged();
+                }
+            };
+
+    /**
+     * Loader for the POST http request, which occurs when the user presses the order button for
+     * the first time and a new order is created in the server database.
+     */
+    private android.support.v4.app.LoaderManager.LoaderCallbacks<Order> postRequestLoader =
+            new LoaderManager.LoaderCallbacks<Order>() {
+                @NonNull
+                @Override
+                public Loader<Order> onCreateLoader(int id, @Nullable Bundle args) {
+                    String POST_URL = "http://grython.pythonanywhere.com/api/orders/add";
+                    int restId = mSettings.getInt(PreferencesUtils.REST_ID, 0);
+                    String restName = mSettings.getString(PreferencesUtils.REST_NAME, "");
+                    Log.e(LOG_TAG, "rest name " + restName);
+                    orderData = new Order(restId, paymentOption, 1, order);
+                    return  new MenuLoader<Order>(getContext(), POST_URL, DATA_TYPE_ORDER_POST, orderData);                }
+
+                @Override
+                public void onLoadFinished(@NonNull Loader<Order> loader, Order data) {
+                    Log.e(LOG_TAG, "Load is finished");
+                    AppExecutors.getInstance().diskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDb.daoAccess().initializeMenu();
+                        }
+                    });
+                    if (data != null) {
+                        order.clear();
+                        order.addAll(data.getItems());
+                        mAdapter.notifyDataSetChanged();
+                        PreferencesUtils.setOrderId(data.getOrderId(), getContext());
+                        PreferencesUtils.setUpdateOrder(false, getContext());
+                        PreferencesUtils.setTotal((int)data.getTotal(), getContext());
+                        for (int i = 0; i<order.size(); i++) {
+                            Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
+                        }
+                        mAdapter.updateTotal();
+
+//            beforeOrder.setVisibility(View.VISIBLE);
+//             emptyState.setVisibility(View.VISIBLE);
+
+                    }
+                }
+
+                @Override
+                public void onLoaderReset(@NonNull Loader<Order> loader) {
+                    order.clear();
+                    mAdapter.notifyDataSetChanged();
+                }
+            };
+
+    /**
+     * Make the request.
+     * @param loaderNum the number of the loader
+     * @param loader the loader
+     */
+    private void makeRequest(int loaderNum, LoaderManager.LoaderCallbacks loader) {
+
+        //check the network connectivity
+        ConnectivityManager connectivityManager = (ConnectivityManager)getContext()
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if(QueryUtils.checkConnectivity(connectivityManager)) {
+            getLoaderManager().initLoader(loaderNum, null, loader);
+        } //else {
+            //empty = rootView.findViewById(R.id.emptyStateMessage);
+            //empty.setText("No internet connection.");
+        //}
     }
 
-    @Override
-    public void onLoaderReset(@NonNull Loader<Order> loader) {
+    /**
+     * Listener for the order button.
+     */
+    private View.OnClickListener orderBtnListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            PreferencesUtils.setUpdateOrder(false, getContext());
+            PreferencesUtils.setIsOrdered(true, getContext());
+            makeRequest(POST_LOADER, postRequestLoader);
+        }
+    };
 
-    }
+    /**
+     * Listener for shared preferences values.
+     */
+    private SharedPreferences.OnSharedPreferenceChangeListener preferenceListener =
+            new SharedPreferences.OnSharedPreferenceChangeListener() {
+                public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+                    if(isAdded() && key.equals(PreferencesUtils.TOTAL_CURRENT_PRICE)) {
+                        orderBtn.setBackgroundColor(getResources().getColor(R.color.holo_red_dark));
+                       // PreferencesUtils.setUpdateOrder(true, getContext());
+                        Log.e(LOG_TAG, "The preferences have been changed");
+                    }
+                }
+            };
+
+    /**
+     * Listener for the radio Buttons.
+     */
+    private View.OnClickListener radioButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            RadioButton r = (RadioButton) view;
+            if (R.id.payment_type_cash == r.getId()) {
+                paymentOption = 0;
+            } else {
+                paymentOption = 1;
+            }
+        }
+    };
+
+
 }

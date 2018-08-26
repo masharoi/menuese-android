@@ -5,6 +5,7 @@ import android.util.Log;
 
 import com.creations.roitman.menume.data.Dish;
 import com.creations.roitman.menume.data.Order;
+import com.creations.roitman.menume.utilities.QueryUtils;
 
 import java.util.List;
 
@@ -17,7 +18,6 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
     private static final String LOG_TAG = MenuLoader.class.getName();
     private String url;
     private Order order;
-    private List<Dish> dishes;
     private String DATA_TYPE;
 
     /**
@@ -32,12 +32,11 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
     /**
      * The public constructor for order.
      */
-    public MenuLoader(Context context, String url, String type, Order order, List<Dish> dishes) {
+    public MenuLoader(Context context, String url, String type, Order order) {
         super(context);
         this.url = url;
         this.DATA_TYPE = type;
         this.order = order;
-        this.dishes = dishes;
     }
 
 
@@ -58,8 +57,10 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
                 return (D) QueryUtils.fetchRestaurantData(this.url);
             case "menu":
                 return (D) QueryUtils.fetchMenuData(this.url);
+            case OrderFragment.DATA_TYPE_ORDER_GET:
+                return (D) QueryUtils.fetchReceiptData(this.url);
             default:
-                return (D) QueryUtils.sendOrderData(this.url, this.order, this.dishes);
+                return (D) QueryUtils.sendOrderData(this.url, this.order);
         }
     }
 }

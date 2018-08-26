@@ -4,5 +4,5 @@
 
     <include layout="@layout/fragment_order"/>
     <include layout="@layout/empty_menu"/>
-    <include layout="@layout/order_progress"/>
+
 </FrameLayout>

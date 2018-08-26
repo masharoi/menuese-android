@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -24,7 +25,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.creations.roitman.menume.data.Dish;
+import com.creations.roitman.menume.data.Menu;
 import com.creations.roitman.menume.data.MenuDatabase;
+import com.creations.roitman.menume.utilities.GenUtils;
+import com.creations.roitman.menume.utilities.PreferencesUtils;
+import com.creations.roitman.menume.utilities.QueryUtils;
 import com.creations.roitman.menume.viewModel.MainViewModel;
 
 import java.util.List;
@@ -38,7 +43,9 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
     private static final String Menu_URL = "http://grython.pythonanywhere.com/api/restaurants/";
     private static final String DATA_TYPE = "menu";
     private TextView empty;
+
     private int restId;
+    private String restName;
 
     private DishesAdapter mAdapter;
     private RecyclerView dishList;
@@ -47,10 +54,6 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
     private MenuDatabase mDb;
     private ImageButton ibutton;
     private SharedPreferences mSettings;
-    public static final String APP_PREFERENCES = "myprefs";
-    public static final String APP_PREFERENCES_HOME = "isMenu";
-    public static final String APP_PREFERENCES_PRICE = "totalPrice";
-    public static final String APP_PREFERENCES_RESTID = "restaurantID";
 
 
     private DialogInterface.OnClickListener myClickListener = new DialogInterface.OnClickListener() {
@@ -63,14 +66,16 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
                             .replace(R.id.frame_fragment_holder, nextFrag,"findThisFragment")
                             .commit();
                     Editor editor = mSettings.edit();
-                    editor.putBoolean(APP_PREFERENCES_HOME, false);
-                    editor.putFloat(APP_PREFERENCES_PRICE, 0);
+                    editor.putFloat(PreferencesUtils.TOTAL_CURRENT_PRICE, 0);
                     editor.apply();
+                    PreferencesUtils.setRestaurantChosen(false, getContext());
+                    PreferencesUtils.setTotal(0, getContext());
 
                     AppExecutors.getInstance().diskIO().execute(new Runnable() {
                         @Override
                         public void run() {
                             mDb.daoAccess().deleteDish();
+
                         }
                     });
                     break;
@@ -84,6 +89,7 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
         }
     };
 
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -91,7 +97,7 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
 
         Log.e(LOG_TAG, "the Menu fragment is created");
 
-        mSettings = getActivity().getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE);
+        mSettings = PreferenceManager.getDefaultSharedPreferences(getContext());
         mDb = MenuDatabase.getInstance(getActivity().getApplicationContext());
 
         ibutton =  (ImageButton) rootView.findViewById(R.id.exit_button);
@@ -125,6 +131,8 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
         mAdapter.setSettings(mSettings);
         dishList.setAdapter(mAdapter);
 
+        Log.e(LOG_TAG, "When created" + GenUtils.listToString(menu.getDishes()).toString());
+
         Bundle bundle = getArguments();
         //if the user has already chosen the restaurant
         if (bundle == null) {
@@ -136,16 +144,17 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
                     menu.getDishes().clear();
                     Log.e(LOG_TAG, "Receiving database update from LiveData in viewModel");
                     menu.getDishes().addAll(dishes);
+                    Log.e(LOG_TAG, GenUtils.listToString(menu.getDishes()).toString());
                     mAdapter.notifyDataSetChanged();
                 }
             });
             //the restaurant is not yet chosen
         } else {
             restId = bundle.getInt("REST_ID");
-            //initialize the restaurant ID for the POST REQUEST in OrderFragment
-            SharedPreferences.Editor editor = mSettings.edit();
-            editor.putInt(APP_PREFERENCES_RESTID, restId);
-            editor.apply();
+            restName = bundle.getString("REST_NAME");
+            //initialize the restaurant ID and name for the POST REQUEST in OrderFragment
+            PreferencesUtils.setRestId(restId, getContext());
+            PreferencesUtils.setRestName(restName, getContext());
             //check the network connectivity
             ConnectivityManager connectivityManager = (ConnectivityManager)getContext()
                     .getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -177,7 +186,7 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
 
             //save all the data to the local database
             for (int i = 0; i < menu.getDishes().size(); i++) {
-                final Dish dish = menu.getDishes().get(i);
+                final Dish dish = (Dish) menu.getDishes().get(i);
                 AppExecutors.getInstance().diskIO().execute(new Runnable() {
                     @Override
                     public void run() {

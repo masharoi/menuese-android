@@ -1,4 +1,4 @@
-package com.creations.roitman.menume;
+package com.creations.roitman.menume.data;
 
 /**
  * This class represents contains the data for the restaurant.

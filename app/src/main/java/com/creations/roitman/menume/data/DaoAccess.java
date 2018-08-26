@@ -17,12 +17,14 @@ import java.util.List;
 @Dao
 public interface DaoAccess {
 
-    @Query("SELECT * FROM `ORDER` WHERE orderId =:id")
-    LiveData<Order> loadOrderById(int id);
+//    @Query("SELECT * FROM `ORDER` WHERE orderId =:id")
+//    LiveData<Order> loadOrderById(int id);
 
     @Query("SELECT * FROM DISH WHERE dishId =:id")
     LiveData<Dish> loadDishByID(int id);
 
+    @Query("UPDATE DISH SET quantity = 0")
+    void initializeMenu();
 
     @Update
     void updateDish(Dish dish);
@@ -38,5 +40,8 @@ public interface DaoAccess {
 
     @Query("SELECT * FROM DISH WHERE QUANTITY != 0")
     LiveData<List<Dish>> fetchDishFromOrder();
+//
+//    @Query("SELECT * FROM ORDEREDDISH")
+//    LiveData<OrderedDish> fetchDishFromCheck();
 
 }
