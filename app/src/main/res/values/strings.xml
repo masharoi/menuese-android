@@ -11,4 +11,6 @@
     <string name="rest_id">restaurantID</string>
     <string name="update_order">updateOrder</string>
     <string name="ruble">₽</string>
+
+
 </resources>

@@ -70,6 +70,7 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
                     editor.apply();
                     PreferencesUtils.setRestaurantChosen(false, getContext());
                     PreferencesUtils.setTotal(0, getContext());
+                    PreferencesUtils.setIsOrdered(false, getContext());
 
                     AppExecutors.getInstance().diskIO().execute(new Runnable() {
                         @Override

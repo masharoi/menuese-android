@@ -46,6 +46,7 @@ public class OrderFragment  extends Fragment {
     final private String LOG_TAG =  OrderFragment.class.getName();
     private static final String DATA_TYPE_ORDER_POST = "order";
     public static final String DATA_TYPE_ORDER_GET = "check";
+    public static final String DATA_TYPE_ORDER_PATCH = "order_patch";
     private static final int POST_LOADER = 2;
     private static final int GET_LOADER = 3;
     private DishesAdapter mAdapter;
@@ -158,6 +159,51 @@ public class OrderFragment  extends Fragment {
             }
         }
     };
+
+    /**
+     * Loader for the GET http request, which occurs when the user has already created an order
+     * and now in check tab. This is needed in order to update the check.
+     */
+    private android.support.v4.app.LoaderManager.LoaderCallbacks<Order> patchRequestLoader =
+            new LoaderManager.LoaderCallbacks<Order>() {
+                @NonNull
+                @Override
+                public Loader<Order> onCreateLoader(int id, @Nullable Bundle args) {
+                    String GET_URL = "http://grython.pythonanywhere.com/api/orders/" +
+                            mSettings.getInt(PreferencesUtils.ORDER_ID, 0);
+                    return  new MenuLoader<Order>(getContext(), GET_URL, DATA_TYPE_ORDER_PATCH);                }
+
+                @Override
+                public void onLoadFinished(@NonNull Loader<Order> loader, Order data) {
+                    Log.e(LOG_TAG, "Load is finished");
+                    if (data != null) {
+                        List<DishItem> temp = new ArrayList<>();
+                        for (int i = 0; i < order.size(); i++) {
+                            if (order.get(i) instanceof Dish) {
+                                temp.add(order.get(i));
+                            }
+                        }
+                        order.clear();
+                        order.addAll(temp);
+                        order.addAll(data.getItems());
+                        mAdapter.notifyDataSetChanged();
+                        PreferencesUtils.setTotal((int)data.getTotal(), getContext());
+                        for (int i = 0; i<order.size(); i++) {
+                            Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
+                        }
+                        mAdapter.updateTotal();
+//            beforeOrder.setVisibility(View.VISIBLE);
+//             emptyState.setVisibility(View.VISIBLE);
+
+                    }
+                }
+
+                @Override
+                public void onLoaderReset(@NonNull Loader<Order> loader) {
+                    order.clear();
+                    mAdapter.notifyDataSetChanged();
+                }
+            };
 
     /**
      * Loader for the GET http request, which occurs when the user has already created an order
