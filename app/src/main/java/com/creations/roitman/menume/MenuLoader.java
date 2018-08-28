@@ -5,6 +5,7 @@ import android.util.Log;
 
 import com.creations.roitman.menume.data.Dish;
 import com.creations.roitman.menume.data.Order;
+import com.creations.roitman.menume.data.User;
 import com.creations.roitman.menume.utilities.QueryUtils;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
     private String url;
     private Order order;
     private String DATA_TYPE;
+    private User user;
 
     /**
      * The public constructor.
@@ -37,6 +39,16 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
         this.url = url;
         this.DATA_TYPE = type;
         this.order = order;
+    }
+
+    /**
+     * The public constructor for sign up.
+     */
+    public MenuLoader(Context context, String url, String type, User user) {
+        super(context);
+        this.url = url;
+        this.DATA_TYPE = type;
+        this.user = user;
     }
 
 

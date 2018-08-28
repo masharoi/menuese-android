@@ -33,8 +33,5 @@ dependencies {
     implementation "android.arch.lifecycle:extensions:$lifecycle_version"
     annotationProcessor "android.arch.lifecycle:compiler:$lifecycle_version"
     implementation 'com.google.firebase:firebase-core:16.0.3'
-    implementation 'com.firebaseui:firebase-ui-auth:4.1.0'
-    implementation 'com.google.firebase:firebase-auth:16.0.3'
-    implementation 'com.google.android.gms:play-services-auth:16.0.0'
+
 }
-apply plugin: 'com.google.gms.google-services'

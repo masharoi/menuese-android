@@ -80,7 +80,7 @@ public class RestaurantFragment extends Fragment implements android.support.v4.a
 
     @Override
     public android.support.v4.content.Loader<List<Restaurant>> onCreateLoader(int i, Bundle bundle) {
-        return new MenuLoader(getContext(), RESTAURANTS_URL, DATA_TYPE);
+        return new MenuLoader<List<Restaurant>>(getContext(), RESTAURANTS_URL, DATA_TYPE);
     }
 
     @Override

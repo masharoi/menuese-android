@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import com.creations.roitman.menume.SignUpActivity;
+
 /**
  * This is the utility class that contains static methods to update values in SharedPreferences.
  */
@@ -17,6 +19,8 @@ public class PreferencesUtils {
     public static final String ORDER_ID = "orderId";
     public static final String REST_NAME = "restName";
     public static final String TOTAL_PRICE = "totalPriceInCheck";
+    public static final String USER_TOKEN = "userToken";
+    public static final String INVALID_USER_TOKEN = "-1";
 
 
 
@@ -93,6 +97,13 @@ public class PreferencesUtils {
         SharedPreferences mSettings = PreferenceManager.getDefaultSharedPreferences(c);
         SharedPreferences.Editor editor = mSettings.edit();
         editor.putString(REST_NAME, restName);
+        editor.apply();
+    }
+
+    public static void setToken(String token, Context c) {
+        SharedPreferences mSettings = PreferenceManager.getDefaultSharedPreferences(c);
+        SharedPreferences.Editor editor = mSettings.edit();
+        editor.putString(USER_TOKEN, token);
         editor.apply();
     }
 }

@@ -174,7 +174,7 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
     @NonNull
     @Override
     public Loader<Menu> onCreateLoader(int id, @Nullable Bundle args) {
-        return new MenuLoader(getContext(), Menu_URL + String.valueOf(this.restId), DATA_TYPE);
+        return new MenuLoader<Menu>(getContext(), Menu_URL + String.valueOf(this.restId), DATA_TYPE);
     }
 
     @Override

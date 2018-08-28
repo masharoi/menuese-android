@@ -1,6 +1,6 @@
 package com.creations.roitman.menume;
 
-import android.content.Context;
+
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;

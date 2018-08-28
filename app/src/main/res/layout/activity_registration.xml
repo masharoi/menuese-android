@@ -5,6 +5,14 @@
     android:orientation="vertical"
     android:gravity="center">
 
+
+    <EditText
+        android:id="@+id/username"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:hint="Username"
+        />
     <EditText
         android:id="@+id/user_mail"
         android:layout_width="match_parent"
@@ -18,15 +26,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
+        android:inputType="textPassword"
         android:hint="Password"
-        android:inputType="numberPassword"
         />
+
     <Button
         android:id="@+id/btn_sign_up"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"
-        android:text="Sign Up"/>
+        android:background="@color/holo_red_dark"
+        android:text="Sign Up"
+        android:textColor="@android:color/background_light"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/tv_sign_in"

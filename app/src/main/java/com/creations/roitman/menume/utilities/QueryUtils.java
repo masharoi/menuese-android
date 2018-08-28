@@ -11,6 +11,7 @@ import com.creations.roitman.menume.data.OrderedDish;
 import com.creations.roitman.menume.data.Restaurant;
 import com.creations.roitman.menume.data.Dish;
 import com.creations.roitman.menume.data.Order;
+import com.creations.roitman.menume.data.User;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,6 +35,8 @@ import java.util.List;
 public class QueryUtils {
 
     public static final String LOG_TAG = QueryUtils.class.getSimpleName();
+    public static final String BASE_URL = "http://grython.pythonanywhere.com/";
+    private static boolean isAuth = true;
 
     /**
      * Checks whether the device is connected to the internet.
@@ -66,7 +69,7 @@ public class QueryUtils {
         return dishArray;
     }
 
-    private static JSONObject createJSON(Order order) {
+    private static JSONObject createOrderJSON(Order order) {
 
         JSONObject result = new JSONObject();
         try {
@@ -84,23 +87,53 @@ public class QueryUtils {
 
     }
 
+    public static String sendUserData(String url, User user) {
+        URL urlClass = createUrl(url);
+        JSONObject jsonToSend = createUserJSON(user);
+        String response = null;
+        String token = null;
+        isAuth = false;
+        Log.e(LOG_TAG, "This is json to send: " + jsonToSend);
+        try {
+            response = makePostHttpRequest(urlClass, jsonToSend);
+            Log.e(LOG_TAG, response);
+            JSONObject userData = new JSONObject(response);
+            token = userData.getString("token");
+        } catch (IOException | JSONException e) {
+            Log.e(LOG_TAG, "Error making post request", e);
+        }
+
+        return token;
+    }
+
+    private static JSONObject createUserJSON(User user) {
+        JSONObject result = new JSONObject();
+        try {
+            if (user.getUsername() != null) {
+                result.put("username", user.getUsername());
+            }
+            result.put("password", user.getPassword());
+            result.put("email", user.getMail());
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return result;
+
+    }
+
 
     public static Order sendOrderData(String url, Order order) {
         URL urlClass = createUrl(url);
-        JSONObject jsonToSend = createJSON(order);
-        Order response = null;
+        JSONObject jsonToSend = createOrderJSON(order);
+        String response = null;
         Log.e(LOG_TAG, "This is json to send: " + jsonToSend);
         try {
             response = makePostHttpRequest(urlClass, jsonToSend);
         } catch (IOException e) {
             Log.e(LOG_TAG, "Error making post request", e);
        }
-
-        Log.e(LOG_TAG, response.toString());
-//        response.add(new OrderedDish(1,"Carbonara", 2, 100));
-//        response.add(new OrderedDish(1,"California rolls", 3, 100));
-
-        return response;
+        return extractOrderFromJSON(response);
 
     }
 
@@ -267,7 +300,7 @@ public class QueryUtils {
     }
 
 
-    private static Order makePostHttpRequest(URL url, JSONObject jsonToSend) throws IOException {
+    private static String makePostHttpRequest(URL url, JSONObject jsonToSend) throws IOException {
 
         if (url == null) {
             return null;
@@ -284,7 +317,9 @@ public class QueryUtils {
             urlConnection.setRequestMethod("POST");
             urlConnection.setRequestProperty("Content-Type", "application/json");
             urlConnection.setRequestProperty("Vary", "Accept");
-            urlConnection.setRequestProperty("Authorization", "Token f9f753670794ed3b56b60ae7785eaf073ae3ea84");
+            if (isAuth) {
+                urlConnection.setRequestProperty("Authorization", "Token f9f753670794ed3b56b60ae7785eaf073ae3ea84");
+            }
             urlConnection.setRequestProperty("Allow", "POST, OPTIONS");
             urlConnection.setDoOutput(true);
 
@@ -315,7 +350,8 @@ public class QueryUtils {
                 inputStream.close();
             }
         }
-        return extractOrderFromJSON(jsonResponse);
+
+        return jsonResponse;
 
     }
 
