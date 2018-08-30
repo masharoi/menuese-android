@@ -21,6 +21,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,7 +43,6 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
     private static final String LOG_TAG = MenuFragment.class.getName();
     private static final String Menu_URL = "http://grython.pythonanywhere.com/api/restaurants/";
     private static final String DATA_TYPE = "menu";
-    private TextView empty;
 
     private int restId;
     private String restName;
@@ -54,53 +54,24 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
     private MenuDatabase mDb;
     private ImageButton ibutton;
     private SharedPreferences mSettings;
+    private ProgressBar spinner;
+    private TextView empty;
 
-
-    private DialogInterface.OnClickListener myClickListener = new DialogInterface.OnClickListener() {
-        public void onClick(DialogInterface dialog, int which) {
-            switch (which) {
-                case Dialog.BUTTON_POSITIVE:
-                    Toast.makeText(getActivity(), "Yes is clicked", Toast.LENGTH_SHORT).show();
-                    RestaurantFragment nextFrag= new RestaurantFragment();
-                    getActivity().getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.frame_fragment_holder, nextFrag,"findThisFragment")
-                            .commit();
-                    Editor editor = mSettings.edit();
-                    editor.putFloat(PreferencesUtils.TOTAL_CURRENT_PRICE, 0);
-                    editor.apply();
-                    PreferencesUtils.setRestaurantChosen(false, getContext());
-                    PreferencesUtils.setTotal(0, getContext());
-                    PreferencesUtils.setIsOrdered(false, getContext());
-
-                    AppExecutors.getInstance().diskIO().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            mDb.daoAccess().deleteDish();
-
-                        }
-                    });
-                    break;
-                case Dialog.BUTTON_NEGATIVE:
-                    Toast.makeText(getActivity(), "No is clicked", Toast.LENGTH_SHORT).show();
-                    break;
-//                case Dialog.BUTTON_NEUTRAL:
-//                    Toast.makeText(getActivity(), "Cancel is clicked", Toast.LENGTH_SHORT).show();
-//                    break;
-            }
-        }
-    };
+    private View emptyState, nonEmptyState;
 
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.fragment_dishes, container, false);
+        View rootView = inflater.inflate(R.layout.general_menu_fragment, container, false);
+        nonEmptyState = rootView.findViewById(R.id.menu_frag);
+        emptyState = rootView.findViewById(R.id.empty_menu);
 
         Log.e(LOG_TAG, "the Menu fragment is created");
 
         mSettings = PreferenceManager.getDefaultSharedPreferences(getContext());
         mDb = MenuDatabase.getInstance(getActivity().getApplicationContext());
-
+        spinner = (ProgressBar) rootView.findViewById(R.id.progress_bar);
         ibutton =  (ImageButton) rootView.findViewById(R.id.exit_button);
         ibutton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -111,7 +82,6 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
                 adb.setIcon(android.R.drawable.ic_dialog_info);
                 adb.setPositiveButton("YES", myClickListener);
                 adb.setNegativeButton("NO", myClickListener);
-//                adb.setNeutralButton("CANCEL", myClickListener);
                 adb.create();
                 adb.show();
             }
@@ -135,7 +105,7 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
         Log.e(LOG_TAG, "When created" + GenUtils.listToString(menu.getDishes()).toString());
 
         Bundle bundle = getArguments();
-        //if the user has already chosen the restaurant
+        //if the user has already chosen the restaurant (menu is in the local db)
         if (bundle == null) {
             menu.getDishes().clear();
             MainViewModel vm = ViewModelProviders.of(this).get(MainViewModel.class);
@@ -149,7 +119,7 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
                     mAdapter.notifyDataSetChanged();
                 }
             });
-            //the restaurant is not yet chosen
+            //the restaurant is not yet chosen (menu is not yet in the local db)
         } else {
             restId = bundle.getInt("REST_ID");
             restName = bundle.getString("REST_NAME");
@@ -161,10 +131,13 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
                     .getSystemService(Context.CONNECTIVITY_SERVICE);
 
             if(QueryUtils.checkConnectivity(connectivityManager)) {
+                emptyState.setVisibility(View.GONE);
                 getLoaderManager().initLoader(1, null, this);
+
             } else {
-                empty = rootView.findViewById(R.id.emptyStateMessage);
-                empty.setText("No internet connection.");
+                nonEmptyState.setVisibility(View.GONE);
+                empty = rootView.findViewById(R.id.empty_order_state);
+                empty.setText(R.string.iconnection);
             }
         }
 
@@ -205,4 +178,41 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
         this.menu.getDishes().clear();
         mAdapter.notifyDataSetChanged();
     }
+
+
+    /**
+     * Listener for the dialog buttons.
+     */
+    private DialogInterface.OnClickListener myClickListener = new DialogInterface.OnClickListener() {
+        public void onClick(DialogInterface dialog, int which) {
+            switch (which) {
+                case Dialog.BUTTON_POSITIVE:
+                    Toast.makeText(getActivity(), "Yes is clicked", Toast.LENGTH_SHORT).show();
+                    RestaurantFragment nextFrag= new RestaurantFragment();
+                    getActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.frame_fragment_holder, nextFrag,"findThisFragment")
+                            .commit();
+                    Editor editor = mSettings.edit();
+                    editor.putFloat(PreferencesUtils.TOTAL_CURRENT_PRICE, 0);
+                    editor.apply();
+                    PreferencesUtils.setRestaurantChosen(false, getContext());
+                    PreferencesUtils.setTotal(0, getContext());
+                    PreferencesUtils.setIsOrdered(false, getContext());
+
+                    AppExecutors.getInstance().diskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDb.daoAccess().deleteDish();
+
+                        }
+                    });
+                    break;
+                case Dialog.BUTTON_NEGATIVE:
+                    Toast.makeText(getActivity(), "No is clicked", Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }
+    };
+
+
 }

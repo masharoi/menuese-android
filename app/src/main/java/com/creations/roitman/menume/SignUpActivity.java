@@ -2,8 +2,10 @@ package com.creations.roitman.menume;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -25,6 +27,7 @@ public class SignUpActivity extends AppCompatActivity
     String umail, upassword, username;
     Button btnSignUp;
     TextView signIn;
+    SharedPreferences mSettings;
     public static final String SIGN_UP_TYPE = "signUp";
     public static final String SIGN_UP_POST_URL = "/api/users/create";
     private static final String LOG_TAG = SignUpActivity.class.getName();
@@ -33,6 +36,12 @@ public class SignUpActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mSettings = PreferenceManager.getDefaultSharedPreferences(this);
+        if (!mSettings.getString(PreferencesUtils.USER_TOKEN, "")
+                .equals(PreferencesUtils.INVALID_USER_TOKEN)) {
+            Intent I = new Intent(SignUpActivity.this, MainActivity.class);
+            startActivity(I);
+        }
         setContentView(R.layout.activity_registration);
         emailId = findViewById(R.id.user_mail);
         password = findViewById(R.id.user_password);
@@ -87,7 +96,7 @@ public class SignUpActivity extends AppCompatActivity
     @Override
     public android.content.Loader<String> onCreateLoader(int id, @Nullable Bundle args) {
         return new AuthenticationLoader(this, QueryUtils.BASE_URL + SIGN_UP_POST_URL,
-                SIGN_UP_TYPE, new User(username, umail, upassword));
+                SIGN_UP_TYPE, new User(username, upassword, umail));
     }
 
     @Override

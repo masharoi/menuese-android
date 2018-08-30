@@ -36,63 +36,22 @@ public class QueryUtils {
 
     public static final String LOG_TAG = QueryUtils.class.getSimpleName();
     public static final String BASE_URL = "http://grython.pythonanywhere.com/";
-    private static boolean isAuth = true;
+    private static String token;
 
+    //MAIN METHODS
+
+    // POST REQUESTS
     /**
-     * Checks whether the device is connected to the internet.
-     * @param connectivityManager manager
-     * @return true if the device is connected to the internet
+     * Send the user data via post request.
+     * @param url the url of the request
+     * @param user the data
+     * @return the token of the user
      */
-    public static boolean checkConnectivity(ConnectivityManager connectivityManager) {
-
-         return connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)
-                .getState() == NetworkInfo.State.CONNECTED ||
-                connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
-                        .getState() == NetworkInfo.State.CONNECTED;
-
-    }
-
-    private static JSONArray convertDishesJSON(List<DishItem> dishes) {
-        JSONArray dishArray = new JSONArray();
-        for (int i = 0; i < dishes.size(); i++) {
-            JSONObject dish = new JSONObject();
-            try {
-                dish.put("dish", ((Dish)dishes.get(i)).getDishId());
-                dish.put("quantity", dishes.get(i).getQuantity());
-                dishArray.put(dish);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-        }
-
-        return dishArray;
-    }
-
-    private static JSONObject createOrderJSON(Order order) {
-
-        JSONObject result = new JSONObject();
-        try {
-            result.put("restaurant", order.getRestId());
-            result.put("payment_option", order.getPaymentOption());
-            result.put("order_status", order.getOrderStatus());
-            result.put("items", convertDishesJSON(order.getItems()));
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        return result;
-
-
-    }
-
     public static String sendUserData(String url, User user) {
         URL urlClass = createUrl(url);
-        JSONObject jsonToSend = createUserJSON(user);
+        JSONObject jsonToSend = convertUserJSON(user);
         String response = null;
         String token = null;
-        isAuth = false;
         Log.e(LOG_TAG, "This is json to send: " + jsonToSend);
         try {
             response = makePostHttpRequest(urlClass, jsonToSend);
@@ -106,38 +65,60 @@ public class QueryUtils {
         return token;
     }
 
-    private static JSONObject createUserJSON(User user) {
-        JSONObject result = new JSONObject();
-        try {
-            if (user.getUsername() != null) {
-                result.put("username", user.getUsername());
-            }
-            result.put("password", user.getPassword());
-            result.put("email", user.getMail());
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return result;
-
-    }
-
-
-    public static Order sendOrderData(String url, Order order) {
+    /**
+     * Send the Order data via the post request.
+     * @param url the url where to send the data to
+     * @param order the data
+     * @param t token for authorization
+     * @return the order that the user is currently updating
+     */
+    public static Order sendOrderData(String url, Order order, String t) {
+        token = t;
         URL urlClass = createUrl(url);
-        JSONObject jsonToSend = createOrderJSON(order);
-        String response = null;
+        JSONObject jsonToSend = convertOrderJSON(order);
+        JSONObject jsonObj = null;
         Log.e(LOG_TAG, "This is json to send: " + jsonToSend);
         try {
-            response = makePostHttpRequest(urlClass, jsonToSend);
-        } catch (IOException e) {
+            String jsonResponse = makePostHttpRequest(urlClass, jsonToSend);
+            jsonObj = new JSONObject(jsonResponse);
+        } catch (IOException | JSONException e) {
             Log.e(LOG_TAG, "Error making post request", e);
-       }
-        return extractOrderFromJSON(response);
+        }
+        return extractOrderFromJSON(jsonObj);
 
     }
 
-    public static Order fetchReceiptData(String url) {
+    // GET REQUESTS
+
+    /**
+     * Makes the get request to receive the order that is already in the receipt.
+     * @param url the url for the request
+     * @param tk the token of the user
+     * @return the order
+     */
+    public static Order fetchReceiptData(String url, String tk) {
+        token = tk;
+        URL urlClass = createUrl(url);
+        JSONObject jsonObj = null;
+        try {
+            String jsonResponse = makeHttpRequest(urlClass);
+            jsonObj = new JSONObject(jsonResponse);
+
+        } catch (IOException | JSONException e) {
+            Log.e(LOG_TAG, "Error closing input stream", e);
+        }
+
+        return extractOrderFromJSON(jsonObj);
+    }
+
+    /**
+     * Make the get request to receive all the orders of the user.
+     * @param url the url for the request
+     * @param t the token of the user
+     * @return the list of orders
+     */
+    public static List<Order> fetchOrders(String url, String t) {
+        token = t;
         URL urlClass = createUrl(url);
         String jsonResponse = null;
         try {
@@ -145,8 +126,8 @@ public class QueryUtils {
         } catch (IOException e) {
             Log.e(LOG_TAG, "Error closing input stream", e);
         }
-
-        return extractOrderFromJSON(jsonResponse);
+        Log.e(LOG_TAG, " this is response (formatted) " + extractOrders(jsonResponse).toString());
+        return extractOrders(jsonResponse);
     }
 
     /**
@@ -183,6 +164,110 @@ public class QueryUtils {
             Log.e(LOG_TAG, "Error closing input stream", e);
         }
         return extractMenuFromJSON(jsonResponse);
+    }
+
+    // CONVERSIONS
+
+    // FROM CLASSES TO JSON
+
+
+    /**
+     * Given a list of dishes, return a json representation of that list.
+     * @param dishes the dishes to convert
+     * @return the json representation
+     */
+    private static JSONArray convertDishesJSON(List<DishItem> dishes) {
+        JSONArray dishArray = new JSONArray();
+        for (int i = 0; i < dishes.size(); i++) {
+            JSONObject dish = new JSONObject();
+            try {
+                dish.put("dish", ((Dish)dishes.get(i)).getDishId());
+                dish.put("quantity", dishes.get(i).getQuantity());
+                dishArray.put(dish);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        return dishArray;
+    }
+
+    /**
+     * Given {@link Order}, convert it to JSON.
+     * @param order the order to convert
+     * @return the JSON representation of the dish
+     */
+    private static JSONObject convertOrderJSON(Order order) {
+
+        JSONObject result = new JSONObject();
+        try {
+            result.put("restaurant", order.getRestId());
+            result.put("payment_option", order.getPaymentOption());
+            result.put("order_status", order.getOrderStatus());
+            result.put("table", 2);
+            result.put("items", convertDishesJSON(order.getItems()));
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return result;
+
+
+    }
+
+
+    /**
+     * Represent the user data in form of JSON.
+     * @param user the data
+     * @return the JSONObject, which represents the user
+     */
+    private static JSONObject convertUserJSON(User user) {
+        JSONObject result = new JSONObject();
+        try {
+            if (user.getUsername() != null) {
+                result.put("username", user.getUsername());
+            }
+            result.put("password", user.getPassword());
+            result.put("email", user.getMail());
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return result;
+
+    }
+
+
+    // FROM JSON TO CLASSES
+
+
+    /**
+     * Convert the JSON representation of the List of Orders into {@link List<Order>}
+     * @param jsonResponse the json to convert to orders
+     * @return the list of orders
+     */
+    private static List<Order> extractOrders(String jsonResponse) {
+        if (TextUtils.isEmpty(jsonResponse)) {
+            return null;
+        }
+        List<Order> orders = new ArrayList<>();
+        try {
+            JSONArray ordersJSON = new JSONArray(jsonResponse);
+            for (int i = 0; i < ordersJSON.length(); i++) {
+                JSONObject orderJSON = ordersJSON.getJSONObject(i);
+                Order order = extractOrderFromJSON(orderJSON);
+                orders.add(order);
+                Log.e(LOG_TAG, "This is single order " + order.getRestName());
+
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return orders;
+
     }
 
     /**
@@ -229,15 +314,19 @@ public class QueryUtils {
         return output;
     }
 
-    private static Order extractOrderFromJSON(String orderJSON) {
-        if (TextUtils.isEmpty(orderJSON)) {
+    /**
+     * Convert a single order from json representation into Order
+     * @param orderData the json representation
+     * @return the order
+     */
+    private static Order extractOrderFromJSON(JSONObject orderData) {
+        if (orderData == null) {
             return null;
         }
-        Log.e(LOG_TAG, "This is orderJSON " + orderJSON);
+        Log.e(LOG_TAG, "This is orderJSON " + orderData);
         List<DishItem> order = new ArrayList<>();
         Order result = null;
         try {
-            JSONObject orderData = new JSONObject(orderJSON);
             double totalPrice = orderData.getDouble("total_price");
             String restName = orderData.getString("restaurant");
             int id = orderData.getInt("id");
@@ -255,9 +344,10 @@ public class QueryUtils {
                 order.add(resultDish);
             }
 
-            result = new Order(id, restName, paymentOpt, orderStat, order, totalPrice);
+            result = new Order(id, "DEMONAME", paymentOpt, orderStat, order, totalPrice);
 
         } catch (JSONException e) {
+            Log.e(LOG_TAG, "Problem parsing order data");
             e.printStackTrace();
         }
 
@@ -300,6 +390,16 @@ public class QueryUtils {
     }
 
 
+    // REQUESTS
+
+
+    /**
+     * Make the post request.
+     * @param url the url for the request
+     * @param jsonToSend the json to post
+     * @return response in form of json
+     * @throws IOException
+     */
     private static String makePostHttpRequest(URL url, JSONObject jsonToSend) throws IOException {
 
         if (url == null) {
@@ -317,8 +417,8 @@ public class QueryUtils {
             urlConnection.setRequestMethod("POST");
             urlConnection.setRequestProperty("Content-Type", "application/json");
             urlConnection.setRequestProperty("Vary", "Accept");
-            if (isAuth) {
-                urlConnection.setRequestProperty("Authorization", "Token f9f753670794ed3b56b60ae7785eaf073ae3ea84");
+            if (token != null) {
+                urlConnection.setRequestProperty("Authorization", "Token " + token);
             }
             urlConnection.setRequestProperty("Allow", "POST, OPTIONS");
             urlConnection.setDoOutput(true);
@@ -349,6 +449,7 @@ public class QueryUtils {
             if (inputStream != null) {
                 inputStream.close();
             }
+            token = null;
         }
 
         return jsonResponse;
@@ -371,6 +472,9 @@ public class QueryUtils {
             urlConnection.setReadTimeout(1000000 /* milliseconds */);
             urlConnection.setConnectTimeout(1500000 /* milliseconds */);
             urlConnection.setRequestMethod("GET");
+            if (token != null) {
+                urlConnection.setRequestProperty("Authorization", "Token " + token);
+            }
             urlConnection.connect();
 
             // If the request was successful (response code 200),
@@ -390,10 +494,26 @@ public class QueryUtils {
             if (inputStream != null) {
                 inputStream.close();
             }
+            token = null;
         }
         return jsonResponse;
     }
 
+    // HELPER
+
+    /**
+     * Checks whether the device is connected to the internet.
+     * @param connectivityManager manager
+     * @return true if the device is connected to the internet
+     */
+    public static boolean checkConnectivity(ConnectivityManager connectivityManager) {
+
+         return connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)
+                .getState() == NetworkInfo.State.CONNECTED ||
+                connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+                        .getState() == NetworkInfo.State.CONNECTED;
+
+    }
 
     /**
      * Returns new URL object from the given string URL.

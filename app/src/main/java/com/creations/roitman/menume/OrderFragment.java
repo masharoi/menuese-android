@@ -3,6 +3,7 @@ package com.creations.roitman.menume;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -63,6 +64,7 @@ public class OrderFragment  extends Fragment {
     private RadioGroup rgroup;
     private int paymentOption;
     private Order orderData;
+    private TextView empty;
     private double receiptPrice;
 
     @Override
@@ -73,6 +75,9 @@ public class OrderFragment  extends Fragment {
         beforeOrder = rootView.findViewById(R.id.before_order);
         emptyState = rootView.findViewById(R.id.empty_menu);
         emptyState.setVisibility(View.INVISIBLE);
+
+        empty = rootView.findViewById(R.id.empty_order_state);
+
 
         mDb = MenuDatabase.getInstance(getActivity().getApplicationContext());
         mSettings = PreferenceManager.getDefaultSharedPreferences(getContext());
@@ -192,9 +197,6 @@ public class OrderFragment  extends Fragment {
                             Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
                         }
                         mAdapter.updateTotal();
-//            beforeOrder.setVisibility(View.VISIBLE);
-//             emptyState.setVisibility(View.VISIBLE);
-
                     }
                 }
 
@@ -204,6 +206,18 @@ public class OrderFragment  extends Fragment {
                     mAdapter.notifyDataSetChanged();
                 }
             };
+
+    private String getToken()  {
+        String token = null;
+        if (mSettings.getString(PreferencesUtils.USER_TOKEN, "")
+                .equals(PreferencesUtils.INVALID_USER_TOKEN)) {
+            Intent I = new Intent(getContext(), ActivityLogin.class);
+            startActivity(I);
+        } else {
+            token = mSettings.getString(PreferencesUtils.USER_TOKEN, "");
+        }
+        return token;
+    }
 
     /**
      * Loader for the GET http request, which occurs when the user has already created an order
@@ -216,10 +230,12 @@ public class OrderFragment  extends Fragment {
                 public Loader<Order> onCreateLoader(int id, @Nullable Bundle args) {
                     String GET_URL = "http://grython.pythonanywhere.com/api/orders/" +
                             mSettings.getInt(PreferencesUtils.ORDER_ID, 0);
-                    return  new MenuLoader<Order>(getContext(), GET_URL, DATA_TYPE_ORDER_GET);                }
+                    return  new MenuLoader<Order>(getContext(), GET_URL,
+                            DATA_TYPE_ORDER_GET, getToken());                }
 
                 @Override
                 public void onLoadFinished(@NonNull Loader<Order> loader, Order data) {
+                    emptyState.setVisibility(GONE);
                     Log.e(LOG_TAG, "Load is finished");
                     if (data != null) {
                         List<DishItem> temp = new ArrayList<>();
@@ -237,9 +253,6 @@ public class OrderFragment  extends Fragment {
                             Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
                         }
                         mAdapter.updateTotal();
-//            beforeOrder.setVisibility(View.VISIBLE);
-//             emptyState.setVisibility(View.VISIBLE);
-
                     }
                 }
 
@@ -264,11 +277,13 @@ public class OrderFragment  extends Fragment {
                     String restName = mSettings.getString(PreferencesUtils.REST_NAME, "");
                     Log.e(LOG_TAG, "rest name " + restName);
                     orderData = new Order(restId, paymentOption, 1, order);
-                    return  new MenuLoader<Order>(getContext(), POST_URL, DATA_TYPE_ORDER_POST, orderData);                }
+                    return  new MenuLoader<Order>(getContext(), POST_URL, DATA_TYPE_ORDER_POST,
+                            orderData, getToken());                }
 
                 @Override
                 public void onLoadFinished(@NonNull Loader<Order> loader, Order data) {
                     Log.e(LOG_TAG, "Load is finished");
+                    emptyState.setVisibility(GONE);
                     AppExecutors.getInstance().diskIO().execute(new Runnable() {
                         @Override
                         public void run() {
@@ -286,9 +301,6 @@ public class OrderFragment  extends Fragment {
                             Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
                         }
                         mAdapter.updateTotal();
-
-//            beforeOrder.setVisibility(View.VISIBLE);
-//             emptyState.setVisibility(View.VISIBLE);
 
                     }
                 }
@@ -312,11 +324,12 @@ public class OrderFragment  extends Fragment {
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
 
         if(QueryUtils.checkConnectivity(connectivityManager)) {
+            emptyState.setVisibility(View.GONE);
             getLoaderManager().initLoader(loaderNum, null, loader);
-        } //else {
-            //empty = rootView.findViewById(R.id.emptyStateMessage);
-            //empty.setText("No internet connection.");
-        //}
+        } else {
+            beforeOrder.setVisibility(View.GONE);
+            empty.setText(R.string.iconnection);
+        }
     }
 
     /**

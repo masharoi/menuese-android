@@ -21,6 +21,17 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
     private Order order;
     private String DATA_TYPE;
     private User user;
+    private String token;
+
+    /**
+     * The public constructor for the queries that require tokens.
+     */
+    public MenuLoader(Context context, String url, String type, String token) {
+        super(context);
+        this.url = url;
+        this.DATA_TYPE = type;
+        this.token = token;
+    }
 
     /**
      * The public constructor.
@@ -34,11 +45,12 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
     /**
      * The public constructor for order.
      */
-    public MenuLoader(Context context, String url, String type, Order order) {
+    public MenuLoader(Context context, String url, String type, Order order, String token) {
         super(context);
         this.url = url;
         this.DATA_TYPE = type;
         this.order = order;
+        this.token = token;
     }
 
     /**
@@ -70,9 +82,11 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
             case "menu":
                 return (D) QueryUtils.fetchMenuData(this.url);
             case OrderFragment.DATA_TYPE_ORDER_GET:
-                return (D) QueryUtils.fetchReceiptData(this.url);
+                return (D) QueryUtils.fetchReceiptData(this.url, this.token);
+            case ProfileFragment.PROFILE_TYPE:
+                return (D) QueryUtils.fetchOrders(this.url, this.token);
             default:
-                return (D) QueryUtils.sendOrderData(this.url, this.order);
+                return (D) QueryUtils.sendOrderData(this.url, this.order, this.token);
         }
     }
 }

@@ -13,6 +13,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.creations.roitman.menume.data.Restaurant;
@@ -27,27 +28,32 @@ public class RestaurantFragment extends Fragment implements android.support.v4.a
     private static final String RESTAURANTS_URL = "http://grython.pythonanywhere.com/api/restaurants";
     private static final String DATA_TYPE = "restaurant";
     private TextView empty;
-
+    private ProgressBar spinner;
     private RestaurantAdapter mAdapter;
-    private RecyclerView mNumbersList;
+    private RecyclerView restaurantList;
     private List<Restaurant> restaurants = new ArrayList<Restaurant>();
+    private View emptyState, nonEmptyState;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        View rootView = inflater.inflate(R.layout.fragment_bottom_bar, container, false);
+        View rootView = inflater.inflate(R.layout.general_rest_fragment, container, false);
+        nonEmptyState = rootView.findViewById(R.id.rest_frag);
+        emptyState = rootView.findViewById(R.id.empty_menu);
         LinearLayoutManager layoutManager = new LinearLayoutManager(getActivity());
 
         Log.e(LOG_TAG, "the Restaurant fragment is created");
 
-        mNumbersList = (RecyclerView) rootView.findViewById(R.id.rv_numbers);
-        mNumbersList.setLayoutManager(layoutManager);
-        mNumbersList.setHasFixedSize(true);
+        spinner = (ProgressBar) rootView.findViewById(R.id.progress_bar);
+
+        restaurantList = (RecyclerView) rootView.findViewById(R.id.rv_numbers);
+        restaurantList.setLayoutManager(layoutManager);
+        restaurantList.setHasFixedSize(true);
 
         DividerItemDecoration itemDecorator = new DividerItemDecoration(getContext(), DividerItemDecoration.VERTICAL);
         itemDecorator.setDrawable(ContextCompat.getDrawable(getContext(), R.drawable.custom_divider));
-        mNumbersList.addItemDecoration(itemDecorator);
+        restaurantList.addItemDecoration(itemDecorator);
 
         mAdapter = new RestaurantAdapter(restaurants, new RestaurantAdapter.OnItemClickListener() {
             @Override public void onItemClick(int id, String name) {
@@ -63,17 +69,19 @@ public class RestaurantFragment extends Fragment implements android.support.v4.a
                 PreferencesUtils.setIsOrdered(false, getContext());
             }
         });
-        mNumbersList.setAdapter(mAdapter);
+        restaurantList.setAdapter(mAdapter);
 
         //check the network connectivity
         ConnectivityManager connectivityManager = (ConnectivityManager)getContext()
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
 
         if(QueryUtils.checkConnectivity(connectivityManager)) {
+            emptyState.setVisibility(View.GONE);
             getLoaderManager().initLoader(0, null, this);
         } else {
-            empty = rootView.findViewById(R.id.emptyStateMessage);
-            empty.setText("No internet connection.");
+            nonEmptyState.setVisibility(View.GONE);
+            empty = rootView.findViewById(R.id.empty_order_state);
+            empty.setText(R.string.iconnection);
         }
         return rootView;
     }
@@ -86,6 +94,12 @@ public class RestaurantFragment extends Fragment implements android.support.v4.a
     @Override
     public void onLoadFinished(@NonNull android.support.v4.content.Loader<List<Restaurant>> loader,
                                List<Restaurant> restaurants) {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        spinner.setVisibility(View.GONE);
         Log.e(LOG_TAG, "Load is finished");
         if (restaurants != null && !restaurants.isEmpty()) {
             this.restaurants.clear();
