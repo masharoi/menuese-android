@@ -3,6 +3,9 @@ package com.creations.roitman.menume.data;
 
 import java.util.List;
 
+/**
+ * Represents the order in the restaurant.
+ */
 
 public class Order {
 
@@ -13,6 +16,7 @@ public class Order {
     private List<DishItem> items;
     private int restId;
     private double total;
+    private String timestamp;
 
 
     /**
@@ -25,13 +29,14 @@ public class Order {
      */
 
     public Order(int orderId, String restName, int paymentOption, int orderStatus,
-                 List<DishItem> items, double total) {
+                 List<DishItem> items, double total, String timestamp) {
         this.orderId = orderId;
         this.restName = restName;
         this.paymentOption = paymentOption;
         this.orderStatus = orderStatus;
         this.items = items;
         this.total = total;
+        this.timestamp = timestamp;
     }
 
     /**
@@ -62,11 +67,34 @@ public class Order {
         this.items = items;
     }
 
+    /**
+     * Get the timestamp of the order.
+     * @return the timestamp
+     */
+    public String getTimestamp() {
+        return timestamp;
+    }
 
+    /**
+     * Set the timestamp of the order.
+     * @param timestamp to set
+     */
+    public void setTimestamp(String timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    /**
+     * Set the total price of the order.
+     * @param total to set
+     */
     public void setTotal(double total) {
         this.total = total;
     }
 
+    /**
+     * Get the total price of the order.
+     * @return the total price
+     */
     public double getTotal() {
         return total;
     }

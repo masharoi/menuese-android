@@ -7,10 +7,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.creations.roitman.menume.data.DishItem;
 import com.creations.roitman.menume.data.Order;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.OrderViewHolder> {
@@ -27,7 +25,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.OrderViewH
      * Interface for the Listener of the items in the RecyclerView.
      */
     public interface OnItemClickListener {
-        void onItemClick();
+        void onItemClick(int id);
     }
 
     @NonNull
@@ -65,13 +63,13 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.OrderViewH
 
         }
 
-        void bind(int position, final OnItemClickListener listener) {
-            totalPrice.setText(String.valueOf(orders.get(position).getTotal()));
+        void bind(final int position, final OnItemClickListener listener) {
+            totalPrice.setText(String.valueOf(orders.get(position).getTotal()) + "₽");
             restName.setText(orders.get(position).getRestName());
             orderDate.setText("29.08.18");
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
-                    listener.onItemClick();
+                    listener.onItemClick(orders.get(position).getOrderId());
                 }
             });
         }

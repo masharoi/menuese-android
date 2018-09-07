@@ -45,6 +45,8 @@ import static android.view.View.GONE;
 public class OrderFragment  extends Fragment {
 
     final private String LOG_TAG =  OrderFragment.class.getName();
+    private static final String ORDER_URL_GET = "/api/orders/";
+    private static final String ORDER_URL_POST = "/api/orders/add";
     private static final String DATA_TYPE_ORDER_POST = "order";
     public static final String DATA_TYPE_ORDER_GET = "check";
     public static final String DATA_TYPE_ORDER_PATCH = "order_patch";
@@ -67,6 +69,7 @@ public class OrderFragment  extends Fragment {
     private TextView empty;
     private double receiptPrice;
 
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -83,6 +86,11 @@ public class OrderFragment  extends Fragment {
         mSettings = PreferenceManager.getDefaultSharedPreferences(getContext());
         mSettings.registerOnSharedPreferenceChangeListener(preferenceListener);
 
+        if (!mSettings.getBoolean(PreferencesUtils.IS_REST_CHOSEN, false)) {
+            emptyState.setVisibility(View.VISIBLE);
+            beforeOrder.setVisibility(View.GONE);
+            return rootView;
+        }
         orderBtn = (Button) rootView.findViewById(R.id.order_btn);
         if (mSettings.getBoolean(PreferencesUtils.UPDATE_ORDER, false)) {
             orderBtn.setBackgroundColor(getResources().getColor(R.color.holo_red_dark));
@@ -174,30 +182,16 @@ public class OrderFragment  extends Fragment {
                 @NonNull
                 @Override
                 public Loader<Order> onCreateLoader(int id, @Nullable Bundle args) {
-                    String GET_URL = "http://grython.pythonanywhere.com/api/orders/" +
+                    String PATCH_URL = QueryUtils.BASE_URL + ORDER_URL_GET +
                             mSettings.getInt(PreferencesUtils.ORDER_ID, 0);
-                    return  new MenuLoader<Order>(getContext(), GET_URL, DATA_TYPE_ORDER_PATCH);                }
+
+                    return  new MenuLoader<Order>(getContext(), PATCH_URL,
+                            DATA_TYPE_ORDER_PATCH, dishesToUpdate(), getToken());                }
 
                 @Override
                 public void onLoadFinished(@NonNull Loader<Order> loader, Order data) {
                     Log.e(LOG_TAG, "Load is finished");
-                    if (data != null) {
-                        List<DishItem> temp = new ArrayList<>();
-                        for (int i = 0; i < order.size(); i++) {
-                            if (order.get(i) instanceof Dish) {
-                                temp.add(order.get(i));
-                            }
-                        }
-                        order.clear();
-                        order.addAll(temp);
-                        order.addAll(data.getItems());
-                        mAdapter.notifyDataSetChanged();
-                        PreferencesUtils.setTotal((int)data.getTotal(), getContext());
-                        for (int i = 0; i<order.size(); i++) {
-                            Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
-                        }
-                        mAdapter.updateTotal();
-                    }
+                    updateList(data);
                 }
 
                 @Override
@@ -207,17 +201,6 @@ public class OrderFragment  extends Fragment {
                 }
             };
 
-    private String getToken()  {
-        String token = null;
-        if (mSettings.getString(PreferencesUtils.USER_TOKEN, "")
-                .equals(PreferencesUtils.INVALID_USER_TOKEN)) {
-            Intent I = new Intent(getContext(), ActivityLogin.class);
-            startActivity(I);
-        } else {
-            token = mSettings.getString(PreferencesUtils.USER_TOKEN, "");
-        }
-        return token;
-    }
 
     /**
      * Loader for the GET http request, which occurs when the user has already created an order
@@ -237,23 +220,7 @@ public class OrderFragment  extends Fragment {
                 public void onLoadFinished(@NonNull Loader<Order> loader, Order data) {
                     emptyState.setVisibility(GONE);
                     Log.e(LOG_TAG, "Load is finished");
-                    if (data != null) {
-                        List<DishItem> temp = new ArrayList<>();
-                        for (int i = 0; i < order.size(); i++) {
-                            if (order.get(i) instanceof Dish) {
-                                temp.add(order.get(i));
-                            }
-                        }
-                        order.clear();
-                        order.addAll(temp);
-                        order.addAll(data.getItems());
-                        mAdapter.notifyDataSetChanged();
-                        PreferencesUtils.setTotal((int)data.getTotal(), getContext());
-                        for (int i = 0; i<order.size(); i++) {
-                            Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
-                        }
-                        mAdapter.updateTotal();
-                    }
+                    updateList(data);
                 }
 
                 @Override
@@ -262,6 +229,7 @@ public class OrderFragment  extends Fragment {
                     mAdapter.notifyDataSetChanged();
                 }
             };
+
 
     /**
      * Loader for the POST http request, which occurs when the user presses the order button for
@@ -272,7 +240,7 @@ public class OrderFragment  extends Fragment {
                 @NonNull
                 @Override
                 public Loader<Order> onCreateLoader(int id, @Nullable Bundle args) {
-                    String POST_URL = "http://grython.pythonanywhere.com/api/orders/add";
+                    String POST_URL = QueryUtils.BASE_URL + ORDER_URL_POST;
                     int restId = mSettings.getInt(PreferencesUtils.REST_ID, 0);
                     String restName = mSettings.getString(PreferencesUtils.REST_NAME, "");
                     Log.e(LOG_TAG, "rest name " + restName);
@@ -312,6 +280,8 @@ public class OrderFragment  extends Fragment {
                 }
             };
 
+
+
     /**
      * Make the request.
      * @param loaderNum the number of the loader
@@ -338,11 +308,39 @@ public class OrderFragment  extends Fragment {
     private View.OnClickListener orderBtnListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
+            Log.e(LOG_TAG, "This is IS_ORDERED " + mSettings.getBoolean(PreferencesUtils.IS_ORDERED, false));
+            if (mSettings.getBoolean(PreferencesUtils.IS_ORDERED, false)) {
+                if (dishesToUpdate() == null) {
+                    Toast.makeText(getActivity(), "No items to add.", Toast.LENGTH_SHORT).show();
+                } else {
+                    makeRequest(POST_LOADER, patchRequestLoader);
+                }
+            } else {
+                makeRequest(POST_LOADER, postRequestLoader);
+                PreferencesUtils.setIsOrdered(true, getContext());
+            }
             PreferencesUtils.setUpdateOrder(false, getContext());
-            PreferencesUtils.setIsOrdered(true, getContext());
-            makeRequest(POST_LOADER, postRequestLoader);
         }
     };
+
+    /**
+     * Gets all the items in the list that needs to be included in the check, if there are none,
+     * returns null.
+     * @return the list of dishes that
+     */
+    private List<DishItem> dishesToUpdate() {
+        List<DishItem> dishesToUpdate = new ArrayList<>();
+        for (int i=0;i<order.size();i++) {
+            if (order.get(i) instanceof Dish) {
+                dishesToUpdate.add(order.get(i));
+            }
+        }
+
+        if (dishesToUpdate.size() == 0) {
+            return null;
+        }
+        return dishesToUpdate;
+    }
 
     /**
      * Listener for shared preferences values.
@@ -372,6 +370,48 @@ public class OrderFragment  extends Fragment {
             }
         }
     };
+
+    /**
+     * Update the list with data.
+     * @param data the updated order
+     */
+    private void updateList(Order data) {
+        if (data != null) {
+            List<DishItem> temp = new ArrayList<>();
+            for (int i = 0; i < order.size(); i++) {
+                if (order.get(i) instanceof Dish) {
+                    temp.add(order.get(i));
+                }
+            }
+            order.clear();
+            order.addAll(temp);
+            order.addAll(data.getItems());
+            mAdapter.notifyDataSetChanged();
+            PreferencesUtils.setTotal((int)data.getTotal(), getContext());
+            for (int i = 0; i<order.size(); i++) {
+                Log.e(LOG_TAG, "This is name after load " + order.get(i).getName());
+            }
+            mAdapter.updateTotal();
+        }
+    }
+
+    /**
+     * Gets the token of the current user. If the user has invalid token, then the
+     * {@link ActivityLogin} is started.
+     * @return the token
+     */
+    private String getToken()  {
+        String token = null;
+        if (mSettings.getString(PreferencesUtils.USER_TOKEN, "")
+                .equals(PreferencesUtils.INVALID_USER_TOKEN)) {
+            Intent I = new Intent(getContext(), ActivityLogin.class);
+            startActivity(I);
+        } else {
+            token = mSettings.getString(PreferencesUtils.USER_TOKEN, "");
+        }
+        return token;
+    }
+
 
 
 }

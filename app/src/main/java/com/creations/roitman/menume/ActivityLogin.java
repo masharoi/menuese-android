@@ -20,9 +20,9 @@ import com.creations.roitman.menume.data.User;
 import com.creations.roitman.menume.utilities.PreferencesUtils;
 import com.creations.roitman.menume.utilities.QueryUtils;
 
-
-
-
+/**
+ * Activity for the user login.
+ */
 public class ActivityLogin extends AppCompatActivity implements android.app.LoaderManager.LoaderCallbacks<String> {
 
     public EditText loginEmailId, logInpasswd;
@@ -32,7 +32,7 @@ public class ActivityLogin extends AppCompatActivity implements android.app.Load
     String userEmail, userPswrd;
 
     public static final String LOG_IN_TYPE = "logIn";
-    public static final String LOG_IN_POST_URL = "/api/users/login";
+    public static final String LOG_IN_POST_URL = "/api/users/login/";
 
 
     @Override
@@ -85,12 +85,6 @@ public class ActivityLogin extends AppCompatActivity implements android.app.Load
                     (LoaderManager.LoaderCallbacks<String>) this);
         }
     }
-
-//    @Override
-//    protected void onStart() {
-//        super.onStart();
-//        firebaseAuth.addAuthStateListener(authStateListener);
-//    }
 
     /**
      * Listener for shared preferences values.

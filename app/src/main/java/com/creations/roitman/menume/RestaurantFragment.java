@@ -25,8 +25,8 @@ import java.util.List;
 
 public class RestaurantFragment extends Fragment implements android.support.v4.app.LoaderManager.LoaderCallbacks<List<Restaurant>> {
     private static final String LOG_TAG = RestaurantFragment.class.getName();
-    private static final String RESTAURANTS_URL = "http://grython.pythonanywhere.com/api/restaurants";
-    private static final String DATA_TYPE = "restaurant";
+    private static final String RESTAURANTS_URL = "/api/restaurants";
+    public static final String DATA_TYPE = "restaurant";
     private TextView empty;
     private ProgressBar spinner;
     private RestaurantAdapter mAdapter;
@@ -88,7 +88,8 @@ public class RestaurantFragment extends Fragment implements android.support.v4.a
 
     @Override
     public android.support.v4.content.Loader<List<Restaurant>> onCreateLoader(int i, Bundle bundle) {
-        return new MenuLoader<List<Restaurant>>(getContext(), RESTAURANTS_URL, DATA_TYPE);
+        return new MenuLoader<List<Restaurant>>(getContext(),
+                QueryUtils.BASE_URL + RESTAURANTS_URL, DATA_TYPE);
     }
 
     @Override

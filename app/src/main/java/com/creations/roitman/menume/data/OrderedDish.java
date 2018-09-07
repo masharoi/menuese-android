@@ -2,6 +2,10 @@ package com.creations.roitman.menume.data;
 
 import android.arch.persistence.room.Entity;
 
+/**
+ * This class represents the dish that is already in the receipt.
+ */
+
 @Entity
 public class OrderedDish extends DishItem implements ListItem{
 

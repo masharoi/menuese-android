@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.creations.roitman.menume.data.Dish;
+import com.creations.roitman.menume.data.DishItem;
 import com.creations.roitman.menume.data.Order;
 import com.creations.roitman.menume.data.User;
 import com.creations.roitman.menume.utilities.QueryUtils;
@@ -20,8 +21,8 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
     private String url;
     private Order order;
     private String DATA_TYPE;
-    private User user;
     private String token;
+    private List<DishItem> dishes;
 
     /**
      * The public constructor for the queries that require tokens.
@@ -53,14 +54,14 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
         this.token = token;
     }
 
-    /**
-     * The public constructor for sign up.
-     */
-    public MenuLoader(Context context, String url, String type, User user) {
+
+    public MenuLoader(Context context, String patch_url, String type,
+                      List<DishItem> dishes, String token) {
         super(context);
-        this.url = url;
+        this.url = patch_url;
         this.DATA_TYPE = type;
-        this.user = user;
+        this.dishes = dishes;
+        this.token = token;
     }
 
 
@@ -77,14 +78,17 @@ public class MenuLoader<D> extends android.support.v4.content.AsyncTaskLoader<D>
             return null;
         }
         switch (DATA_TYPE) {
-            case "restaurant":
+            case RestaurantFragment.DATA_TYPE:
                 return (D) QueryUtils.fetchRestaurantData(this.url);
-            case "menu":
+            case MenuFragment.DATA_TYPE:
                 return (D) QueryUtils.fetchMenuData(this.url);
             case OrderFragment.DATA_TYPE_ORDER_GET:
+            case ReceiptFragment.PROFILE_SINGLE_TYPE:
                 return (D) QueryUtils.fetchReceiptData(this.url, this.token);
             case ProfileFragment.PROFILE_TYPE:
                 return (D) QueryUtils.fetchOrders(this.url, this.token);
+            case OrderFragment.DATA_TYPE_ORDER_PATCH:
+                return (D) QueryUtils.sendOrderPatch(this.url, this.dishes, this.token);
             default:
                 return (D) QueryUtils.sendOrderData(this.url, this.order, this.token);
         }

@@ -22,8 +22,6 @@ public class PreferencesUtils {
     public static final String USER_TOKEN = "userToken";
     public static final String INVALID_USER_TOKEN = "-1";
 
-
-
     /**
      * Set the total price of the current order.
      * @param total price of the order

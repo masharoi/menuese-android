@@ -42,7 +42,7 @@ public class MenuFragment extends Fragment implements android.support.v4.app.Loa
 
     private static final String LOG_TAG = MenuFragment.class.getName();
     private static final String Menu_URL = "http://grython.pythonanywhere.com/api/restaurants/";
-    private static final String DATA_TYPE = "menu";
+    public static final String DATA_TYPE = "menu";
 
     private int restId;
     private String restName;

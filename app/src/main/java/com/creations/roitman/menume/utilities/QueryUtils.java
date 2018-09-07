@@ -52,6 +52,7 @@ public class QueryUtils {
         JSONObject jsonToSend = convertUserJSON(user);
         String response = null;
         String token = null;
+        Log.e(LOG_TAG, "This is the url: " + url);
         Log.e(LOG_TAG, "This is json to send: " + jsonToSend);
         try {
             response = makePostHttpRequest(urlClass, jsonToSend);
@@ -77,9 +78,11 @@ public class QueryUtils {
         URL urlClass = createUrl(url);
         JSONObject jsonToSend = convertOrderJSON(order);
         JSONObject jsonObj = null;
+        Log.e(LOG_TAG, "This is url " + url);
         Log.e(LOG_TAG, "This is json to send: " + jsonToSend);
         try {
             String jsonResponse = makePostHttpRequest(urlClass, jsonToSend);
+            Log.e(LOG_TAG, "This is the json resp " + jsonResponse);
             jsonObj = new JSONObject(jsonResponse);
         } catch (IOException | JSONException e) {
             Log.e(LOG_TAG, "Error making post request", e);
@@ -100,8 +103,10 @@ public class QueryUtils {
         token = tk;
         URL urlClass = createUrl(url);
         JSONObject jsonObj = null;
+        Log.e(LOG_TAG, "this is url " + url);
         try {
             String jsonResponse = makeHttpRequest(urlClass);
+            Log.e(LOG_TAG, "JSON RESPONSE: " + jsonResponse);
             jsonObj = new JSONObject(jsonResponse);
 
         } catch (IOException | JSONException e) {
@@ -126,8 +131,10 @@ public class QueryUtils {
         } catch (IOException e) {
             Log.e(LOG_TAG, "Error closing input stream", e);
         }
-        Log.e(LOG_TAG, " this is response (formatted) " + extractOrders(jsonResponse).toString());
-        return extractOrders(jsonResponse);
+        Log.e(LOG_TAG, "json response " + jsonResponse);
+        List<Order> orders = extractOrders(jsonResponse);
+        Log.e(LOG_TAG, "the orders have just been extracted " + orders.toString());
+        return orders;
     }
 
     /**
@@ -165,6 +172,33 @@ public class QueryUtils {
         }
         return extractMenuFromJSON(jsonResponse);
     }
+
+    // PATCH
+
+    /**
+     * Send the updated information about the order.
+     * @param url the url of the request
+     * @param dishes the dishes to add to the order
+     * @param tk the token of the user
+     * @return the updated version of the order
+     */
+    public static Order sendOrderPatch(String url, List<DishItem> dishes, String tk) {
+        token = tk;
+        URL urlClass = createUrl(url);
+        String jsonResponse = null;
+        JSONObject jsonObj = null;
+        JSONArray jsonToSend = convertDishesJSON(dishes);
+        try {
+            JSONObject json = new JSONObject();
+            json.put("items", jsonToSend);
+            jsonResponse = makePatchHttpRequest(urlClass, json);
+            jsonObj = new JSONObject(jsonResponse);
+        } catch (IOException | JSONException e) {
+            Log.e(LOG_TAG, "Error closing input stream", e);
+        }
+        return extractOrderFromJSON(jsonObj);
+    }
+
 
     // CONVERSIONS
 
@@ -330,6 +364,7 @@ public class QueryUtils {
             double totalPrice = orderData.getDouble("total_price");
             String restName = orderData.getString("restaurant");
             int id = orderData.getInt("id");
+            String timestamp = orderData.getString("timestamp");
             int paymentOpt = orderData.getInt("payment_option");
             int orderStat = orderData.getInt("order_status");
             JSONArray items = orderData.optJSONArray("items");
@@ -344,7 +379,7 @@ public class QueryUtils {
                 order.add(resultDish);
             }
 
-            result = new Order(id, "DEMONAME", paymentOpt, orderStat, order, totalPrice);
+            result = new Order(id, restName, paymentOpt, orderStat, order, totalPrice, timestamp);
 
         } catch (JSONException e) {
             Log.e(LOG_TAG, "Problem parsing order data");
@@ -393,6 +428,63 @@ public class QueryUtils {
     // REQUESTS
 
 
+    private static String makePatchHttpRequest(URL urlClass, JSONObject jsonToSend) throws IOException {
+
+        if (urlClass == null) {
+            return null;
+        }
+
+        HttpURLConnection urlConnection = null;
+        DataOutputStream os = null;
+        InputStream inputStream = null;
+        String jsonResponse = "";
+
+        try {
+            urlConnection = (HttpURLConnection) urlClass.openConnection();
+            urlConnection.setReadTimeout(1000000 /* milliseconds */);
+            urlConnection.setConnectTimeout(1500000 /* milliseconds */);
+            urlConnection.setRequestProperty("X-HTTP-Method-Override", "PATCH");
+            urlConnection.setRequestMethod("POST");
+            urlConnection.setRequestProperty("Content-Type", "application/json");
+            urlConnection.setRequestProperty("Vary", "Accept");
+            if (token != null) {
+                urlConnection.setRequestProperty("Authorization", "Token " + token);
+            }
+            urlConnection.setRequestProperty("Allow", "POST, OPTIONS");
+            urlConnection.setDoOutput(true);
+
+            os = new DataOutputStream(urlConnection.getOutputStream());
+            os.writeBytes(jsonToSend.toString());
+
+            os.flush();
+            Log.e("MSG" , urlConnection.getResponseMessage());
+
+            if (urlConnection.getResponseCode() == 200) {
+                inputStream = urlConnection.getInputStream();
+                jsonResponse = readFromStream(inputStream);
+                Log.e(LOG_TAG, "This is json" + jsonResponse);
+            } else {
+                Log.e(LOG_TAG, "Error response code: " + urlConnection.getResponseCode());
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+            if (os != null) {
+                os.close();
+            }
+            if (inputStream != null) {
+                inputStream.close();
+            }
+            token = null;
+        }
+
+        return jsonResponse;
+    }
+
     /**
      * Make the post request.
      * @param url the url for the request
@@ -428,8 +520,7 @@ public class QueryUtils {
 
             os.flush();
             Log.e("MSG" , urlConnection.getResponseMessage());
-
-            if (urlConnection.getResponseCode() == 201) {
+            if (urlConnection.getResponseCode() == 201 || urlConnection.getResponseCode() == 200) {
                 inputStream = urlConnection.getInputStream();
                 jsonResponse = readFromStream(inputStream);
                 Log.e(LOG_TAG, "This is json" + jsonResponse);
@@ -472,13 +563,18 @@ public class QueryUtils {
             urlConnection.setReadTimeout(1000000 /* milliseconds */);
             urlConnection.setConnectTimeout(1500000 /* milliseconds */);
             urlConnection.setRequestMethod("GET");
+            urlConnection.setRequestProperty("Content-Type", "application/json");
+            urlConnection.setRequestProperty("Vary", "Accept");
+            urlConnection.setRequestProperty("Allow", "GET, POST, HEAD, OPTIONS");
             if (token != null) {
                 urlConnection.setRequestProperty("Authorization", "Token " + token);
             }
             urlConnection.connect();
+            Log.e(LOG_TAG, "I am here");
 
             // If the request was successful (response code 200),
             // then read the input stream and parse the response.
+
             if (urlConnection.getResponseCode() == 200) {
                 inputStream = urlConnection.getInputStream();
                 jsonResponse = readFromStream(inputStream);

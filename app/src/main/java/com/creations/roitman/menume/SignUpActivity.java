@@ -39,6 +39,7 @@ public class SignUpActivity extends AppCompatActivity
         mSettings = PreferenceManager.getDefaultSharedPreferences(this);
         if (!mSettings.getString(PreferencesUtils.USER_TOKEN, "")
                 .equals(PreferencesUtils.INVALID_USER_TOKEN)) {
+            Log.e(LOG_TAG, "Current token: " + mSettings.getString(PreferencesUtils.USER_TOKEN, ""));
             Intent I = new Intent(SignUpActivity.this, MainActivity.class);
             startActivity(I);
         }
